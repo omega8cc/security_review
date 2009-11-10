@@ -53,6 +53,14 @@ If a check is enabled it will be run. You can enable or skip a check on this
 page only after it has been run. Clicking on the 'Help' link beside each check
 will provide details on why the check exists and what was found on the last run.
 
+-- FAQ --
+
+Q: What does the watchdog message "____ is no longer applicable for checking"
+mean?
+A: Some checks purposefully return neither Pass or Fail when it is no longer
+relevant (such as when a module is disabled) so a previously failing or passing
+check that is now not applicable is recorded.
+
 -- SUPPORT --
 
 Please use the issue queue at http://drupal.org/project/security_review for all
