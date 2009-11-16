@@ -12,7 +12,7 @@
  */
 function security_review_check_file_perms() {
   $result = TRUE;
-  $files = _security_review_check_file_perms_scan(rtrim($_SERVER['DOCUMENT_ROOT'] . base_path(), '/'));
+  $files = _security_review_check_file_perms_scan('.');
   if (count($files)) {
     $result = FALSE;
   }
