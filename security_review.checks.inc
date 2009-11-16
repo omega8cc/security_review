@@ -271,7 +271,7 @@ function security_review_check_query_errors($last_check = NULL) {
      $result = FALSE;
   }
   else {
-    // Rather than worrying the user about some query errors we skip reporting a pass.
+    // Rather than worrying the user about the idea of query errors we skip reporting a pass.
     return NULL;
   }
   return array('result' => $result, 'value' => $check_result_value);
@@ -296,6 +296,7 @@ function security_review_check_query_errors_help() {
 }
 
 function security_review_check_failed_logins($last_check = NULL) {
+  $result = TRUE;
   $timestamp = NULL;
   $check_result_value = array();
   $sql = "SELECT message, hostname FROM {watchdog} WHERE type = 'user' AND severity = %d";
@@ -309,7 +310,6 @@ function security_review_check_failed_logins($last_check = NULL) {
       $entries[$row['hostname']][] = $row;
     }
   }
-  $result = TRUE;
   if (!empty($entries)) {
     foreach ($entries as $ip => $records) {
       if (count($records) > 10) {
@@ -321,7 +321,7 @@ function security_review_check_failed_logins($last_check = NULL) {
      $result = FALSE;
   }
   else {
-    // Rather than worrying the user about some failed logins we skip reporting a pass.
+    // Rather than worrying the user about the idea of failed logins we skip reporting a pass.
     return NULL;
   }
   return array('result' => $result, 'value' => $check_result_value);
@@ -384,7 +384,7 @@ function security_review_check_permissions_help() {
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
     foreach ($return['value'] as $rid => $permissions) {
       $role = db_fetch_array(db_query("SELECT name FROM {role} WHERE rid = %d", $rid));
-      $item = t('<a href="!link">%name</a> has @permissions', array('!link' => url('admin/user/permissions/' . $rid), '%name' => $role['name'], '@permissions' => implode(', ', $permissions)));
+      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $role['name'], '%permissions' => implode(', ', $permissions)));
       $element['findings']['items'][] = $item;
     }
   }
@@ -396,12 +396,12 @@ function security_review_check_nodes($last_check = NULL) {
   $result = TRUE;
   $check_result_value = array();
   $timestamp = NULL;
-  $sql = "SELECT DISTINCT(nid) FROM {node_revisions} WHERE body LIKE '%<script%' OR body LIKE '%<?php%'";
+  $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%<script%' OR r.body LIKE '%<?php%'";
   if (!is_null($last_check)) {
-    $sql .= " AND timestamp >= %d";
+    $sql .= " AND n.changed >= %d";
     $timestamp = $last_check['lastrun'];
   }
-  $results = db_query($sql, $timestamp);
+  $results = pager_query($sql, 50, 0, NULL, $timestamp);
   while ($row = db_fetch_array($results)) {
     $check_result_value[] = $row['nid'];
   }
@@ -414,21 +414,21 @@ function security_review_check_nodes($last_check = NULL) {
 
 function security_review_check_nodes_help() {
   $element['title'] = t('Dangerous tags in nodes');
-  $element['descriptions'][] = t("Script and PHP code in the body of nodes does not align with Drupal best practices and can potentially be a vulnerability. It is recommended you remove such content from the body of nodes.");
+  $element['descriptions'][] = t("Script and PHP code in the body of nodes does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such content from the body of nodes.");
   
   $last_check = security_review_get_last_check('security_review', 'nodes');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $element['findings']['descriptions'][] = t('The following nodes have dangerous tags. The links go to the edit page.');
-    $return = security_review_check_nodes($last_check);
-    // @TODO pager?
+    $element['findings']['descriptions'][] = t('The following nodes potentially have dangerous tags. The links go to the edit page.');
+    $return = security_review_check_nodes(); // Don't pass $last_check because timestamp is wrong now.
     foreach ($return['value'] as $nid) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
       $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit');
     }
+    $element['findings']['pager'] = theme('pager', NULL, 50);
   }
   
   $output = theme('security_review_check_help', $element);
@@ -445,7 +445,7 @@ function security_review_check_comments($last_run) {
       $sql .= " AND timestamp >= %d";
       $timestamp = $last_check['lastrun'];
     }
-    $results = db_query($sql, $timestamp);
+    $results = pager_query($sql, 20, 0, NULL, $timestamp);
     while ($row = db_fetch_array($results)) {
       $check_result_value[$row['cid']] = $row['nid'];
     }
@@ -469,8 +469,7 @@ function security_review_check_comments_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('The following comments have dangerous tags. The links go to the edit page.');
-    $return = security_review_check_comments($last_check);
-    // @TODO pager?
+    $return = security_review_check_comments(); // Don't pass $last_check because timestamp is wrong now.
     foreach ($return['value'] as $cid => $nid) {
       $comment = _comment_load($cid);
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
@@ -478,6 +477,7 @@ function security_review_check_comments_help() {
       $title = t('!subject on !title', array('!subject' => $comment->subject, '!title' => $node->title));
       $element['findings']['items'][] = l($title, 'comment/edit/' . $cid);
     }
+    $element['findings']['pager'] = theme('pager', NULL, 20);
   }
   
   $output = theme('security_review_check_help', $element);

@@ -111,20 +111,22 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
   $output = '';
   if (!is_null($module) && !is_null($check_name)) {
     $function = $module . '_security_checks'; // Call the hook implementation.
-    $checklist = $function();
-    $check = $checklist[$module][$check_name];
-    if (isset($check['help'])) {
-      $output = $check['help'];
-    }
-    elseif ($check['type'] == 'callback') {
-      if (isset($check['file'])) {
-        module_load_include('inc', $module, $check['file']);
+    if (function_exists($function)) {
+      $checklist = $function();
+      $check = $checklist[$module][$check_name];
+      if (isset($check['help'])) {
+        $output = $check['help'];
       }
-      $function = $check['value'] . '_help';
-      if (function_exists($function)) {
-        $output = $function();
+      elseif ($check['type'] == 'callback') {
+        if (isset($check['file'])) {
+          module_load_include('inc', $module, $check['file']);
+        }
+        $function = $check['value'] . '_help';
+        if (function_exists($function)) {
+          $output = $function();
+        }
+        // @TODO else
       }
-      // @TODO else
     }
   }
   else {
@@ -133,7 +135,7 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
     $output = _security_review_help();
     // List all checks as links to specific help.
     $output .= '<h3>' . t('Check-specfic help') . '</h3>';
-    $output .= '<p>' . t('Details and help on the security review checks.') . '</p>';
+    $output .= '<p>' . t('Details and help on the security review checks. Checks are not always perfectly correct in their procedure and result. Refer to drupal.org handbook documentation if you are unsure how to make the recommended alterations to your configuration.') . '</p>';
     $checklist = module_invoke_all('security_checks');
     foreach ($checklist as $module => $checks) {
       foreach ($checks as $reviewcheck => $check) {
@@ -188,6 +190,11 @@ function theme_security_review_reviewed($items = array(), $header = '', $desc = 
   return $output;
 }
 
+/**
+ * Theme function for help on a security check.
+ *
+ * Calling function should filter and sanitize.
+ */
 function theme_security_review_check_help($element) {
   $output .= '<h3>' . $element['title'] . '</h3>';
   foreach ($element['descriptions'] as $description) {
@@ -199,6 +206,9 @@ function theme_security_review_check_help($element) {
     }
     if (!empty($element['findings']['items'])) {
       $output .= theme('item_list', $element['findings']['items']);
+    }
+    if ($element['findings']['pager']) {
+      $output .= $element['findings']['pager'];
     }
   }
   return $output;
@@ -264,7 +274,7 @@ function security_review_run($checklist) {
           $log = variable_get('security_review_log', TRUE);
           if ($log) {
             $variables = array('!name' => $check_result['title']);
-            if ($check_result['value']) {
+            if ($check_result['result']) {
               _security_review_log($module, $check_name, '!name check passed', $variables, WATCHDOG_INFO);
             }
             else {
