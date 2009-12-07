@@ -50,8 +50,9 @@ each check if you like.
 Navigate to Administer >> Reports >> Security Review to run the checklist.
 
 If a check is enabled it will be run. You can enable or skip a check on this
-page only after it has been run. Clicking on the 'Help' link beside each check
-will provide details on why the check exists and what was found on the last run.
+page only after it has been run. Clicking on the 'Details' link beside each
+check will provide details on why the check exists and what was found on the 
+last run.
 
 -- FAQ --
 

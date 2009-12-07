@@ -4,7 +4,7 @@
 /**
  * @file
  * Checks for security_review module.
- * 
+ *
  */
 
 /**
@@ -12,21 +12,27 @@
  */
 function security_review_check_file_perms() {
   $result = TRUE;
-  $files = _security_review_check_file_perms_scan('.');
+  // Extract ending folder for file directory path.
+  $file_path = rtrim(file_directory_path(), '/');
+  $file_path = substr($file_path, strrpos($file_path, '/') + 1);
+  // Set files to ignore.
+  $ignore = array('..', 'CVS', $file_path);
+  $files = _security_review_check_file_perms_scan('.', $ignore);
   if (count($files)) {
     $result = FALSE;
   }
   return array('result' => $result, 'value' => $files);
 }
 
-function _security_review_check_file_perms_scan($directory) {
+function _security_review_check_file_perms_scan($directory, $ignore) {
   $items = array();
   if ($handle = opendir($directory)) {
     while (($file = readdir($handle)) !== FALSE) {
-      if ($file[0] != "." && $file != ".." && $file != 'CVS' && $file != 'files') { // @TODO actually get the user-supplied files directory
+      // Don't check hidden files or ones we said to ignore.
+      if ($file[0] != "." && !in_array($file, $ignore)) {
         $file = $directory . "/" . $file;
         if (is_dir($file)) {
-          $items = array_merge($items, _security_review_check_file_perms_scan($file));
+          $items = array_merge($items, _security_review_check_file_perms_scan($file, $ignore));
           if (is_writable( $file)) {
             $items[] = preg_replace("/\/\//si", "/", $file);
           }
@@ -45,7 +51,7 @@ function security_review_check_file_perms_help() {
   $element['title'] =  t("Web server file system permissions");
   $element['descriptions'][] = t("It is dangerous to allow the web server to write to files inside the document root of your server. Doing so would allow Drupal to write files that could then be executed. An attacker might use such a vulnerability to take control of your site. An exception is the files directory which Drupal needs permission to write to in order to provide features like file attachments.");
   $element['descriptions'][] = t("<a href='!link'>Read more about file system permissions in the handbooks.</a>", array('!link' => url('http://drupal.org/node/244924')));
-  
+
   $last_check = security_review_get_last_check('security_review', 'file_perms');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -54,7 +60,7 @@ function security_review_check_file_perms_help() {
     $return = security_review_check_file_perms();
     $element['findings']['descriptions'][] = t('It is recommended that the following files or directories be corrected.');
     foreach ($return['value'] as $file) {
-      $element['findings']['items'][] = check_plain($file); 
+      $element['findings']['items'][] = check_plain($file);
     }
   }
   $output = theme('security_review_check_help', $element);
@@ -98,7 +104,7 @@ function security_review_check_input_formats() {
       }
     }
   }
-  
+
   if (!empty($check_return_value)) {
     $result = FALSE;
   }
@@ -140,7 +146,7 @@ function security_review_check_error_reporting() {
     $result = FALSE;
   }
   else {
-    $result = TRUE; 
+    $result = TRUE;
   }
   return array('result' => $result);
 }
@@ -157,16 +163,21 @@ function security_review_check_error_reporting_help() {
   return $output;
 }
 
+/**
+ * If private files is enabled check that the directory is not under the web root.
+ *
+ * There is ample room for the user to get around this check. @TODO get more sophisticated?
+ */
 function security_review_check_private_files() {
   $file_downloads = variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC);
   if ($file_downloads == FILE_DOWNLOADS_PRIVATE) {
     $file_directory_path = file_directory_path();
-    if (strpos($file_directory_path, '/') == 0) {
-      // @TODO Also check for $_SERVER['DOCUMENT_ROOT']
+    if (strpos($file_directory_path, '/') === 0) {
+      // Path begins at root.
       $result = TRUE;
     }
-    elseif (strpos($file_directory_path, '../') == 0) {
-      // @TODO Check for craftiness?
+    elseif (strpos($file_directory_path, '../') === 0) {
+      // Path begins by moving up the system.
       $result = FALSE;
     }
     else {
@@ -196,7 +207,7 @@ function security_review_check_private_files_help() {
 }
 
 /**
- * 
+ * Check for unsafe allowed extensions.
  */
 function security_review_check_upload_extensions() {
   $result = TRUE;
@@ -215,8 +226,6 @@ function security_review_check_upload_extensions() {
     }
     if (!empty($check_return_value)) {
       $result = FALSE;
-      // Check if untrusted roles can upload. @TODO
-      $untrusted_roles = security_review_untrusted_roles();
     }
   }
   else {
@@ -235,10 +244,9 @@ function security_review_check_upload_extensions_help() {
   elseif ($last_check['result'] == '0') {
     $return = security_review_check_upload_extensions();
     $element['findings']['descriptions'][] = t('<a href="!link">Alter file upload settings.</a>', array('!link' => url('admin/settings/uploads')));
-  
-    $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use.');
+    $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
     foreach ($return['value'] as $extension) {
-      $element['findings']['items'][] = $extension; 
+      $element['findings']['items'][] = $extension;
     }
   }
   $output = theme('security_review_check_help', $element);
@@ -266,7 +274,7 @@ function security_review_check_query_errors($last_check = NULL) {
         $check_result_value[] = $ip;
       }
     }
-  }  
+  }
   if (!empty($check_result_value)) {
      $result = FALSE;
   }
@@ -316,7 +324,7 @@ function security_review_check_failed_logins($last_check = NULL) {
         $check_result_value[] = $ip;
       }
     }
-  }  
+  }
   if (!empty($check_result_value)) {
      $result = FALSE;
   }
@@ -330,7 +338,7 @@ function security_review_check_failed_logins($last_check = NULL) {
 function security_review_check_failed_logins_help() {
   $element['title'] = t('Abundant failed logins from the same IP');
   $element['descriptions'][] = t("Failed login attempts from the same IP may be an artifact of a malicous user attempting to brute-force their way onto your site as an authenticated user to carry out nefarious deeds. ");
-  
+
   $last_check = security_review_get_last_check('security_review', 'failed_logins');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -408,14 +416,14 @@ function security_review_check_nodes($last_check = NULL) {
   if (!empty($check_result_value)) {
     $result = FALSE;
   }
-  
+
   return array('result' => $result, 'value' => $check_result_value);
 }
 
 function security_review_check_nodes_help() {
   $element['title'] = t('Dangerous tags in nodes');
   $element['descriptions'][] = t("Script and PHP code in the body of nodes does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such content from the body of nodes.");
-  
+
   $last_check = security_review_get_last_check('security_review', 'nodes');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -430,17 +438,17 @@ function security_review_check_nodes_help() {
     }
     $element['findings']['pager'] = theme('pager', NULL, 50);
   }
-  
+
   $output = theme('security_review_check_help', $element);
   return $output;
 }
 
-function security_review_check_comments($last_run) {
+function security_review_check_comments($last_check = NULL) {
   $result = TRUE;
   $check_result_value = array();
   $timestamp = NULL;
   if (module_exists('comment')) {
-  $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%<script%' OR comment LIKE '%<?php%'";
+    $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%<script%' OR comment LIKE '%<?php%'";
     if (!is_null($last_check)) {
       $sql .= " AND timestamp >= %d";
       $timestamp = $last_check['lastrun'];
@@ -462,7 +470,7 @@ function security_review_check_comments($last_run) {
 function security_review_check_comments_help() {
   $element['title'] = t('Dangerous tags in comments');
   $element['descriptions'][] = t("There is little reason for script and PHP tags to be in comments (unless they are code examples) and could be in use maliciously.");
-  
+
   $last_check = security_review_get_last_check('security_review', 'comments');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -479,7 +487,7 @@ function security_review_check_comments_help() {
     }
     $element['findings']['pager'] = theme('pager', NULL, 20);
   }
-  
+
   $output = theme('security_review_check_help', $element);
   return $output;
 }

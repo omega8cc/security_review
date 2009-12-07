@@ -12,7 +12,7 @@ function _security_review_help() {
   $output .= '<p>';
   $output .= t('You should take the security of your site very seriously.
     Fortunately, Drupal is fairly secure by default.
-    The Security Review module automates many of the easy-to-make mistakes that render your site insecure, however it does not automatically make your site impenetrable. 
+    The Security Review module automates many of the easy-to-make mistakes that render your site insecure, however it does not automatically make your site impenetrable.
     You should give care to what modules you install and how you configure your site and server.
     Be mindful of who visits your site and what features you expose for their use.');
   $output .= '</p>';
@@ -63,7 +63,7 @@ function _security_review_help_spam() {
 
 function theme_security_review_help_options($element) {
   $output .= '<div class="sec-rev-help-option">';
-  $output .= l($element['problem'], 'admin/reports/security-review/help', array('fragment' => $element['type'], 'attributes' => array('class' =>'sec-rev-help-dyn')));
+  $output .= l($element['problem'], 'admin/reports/security-review/help', array('fragment' => $element['type'], 'attributes' => array('class' => 'sec-rev-help-dyn')));
   $output .= '<div class="sec-rev-help-content">';
   $output .= '<p>' . $element['description'] . '</p>';
   foreach ($element['options'] as $option) {
