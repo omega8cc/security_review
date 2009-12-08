@@ -29,15 +29,16 @@ Two permissions are provided and required to use the module. Navigate to
 Administer >> User management >> Permissions to enable
 'access security review list' and 'run security checks' for trusted roles.
 
-NOTICE: This module provides information on the state of your site's security so
-it is imperative you grant these permissions to trusted roles and users only.
-For instance, if you have an admin role, be sure that all the users who have
-been granted this role are indeed users you trust if you grant them these
-permissions.
+NOTICE:
+This module provides information on the state of your site's security so
+it is imperative you grant Security Review permissions to trusted roles and
+users only. For instance, if you have an admin role that you intend to grant
+these permissions to, be sure that all the users who have been granted this role
+are indeed users you trust.
 
 After you have granted permissions to the module you should inform the system
 what roles are not trusted. Navigate to
-Administer >> Reports >> Security Review >> Settings to mark which roles are
+Administer >> Reports >> Security review >> Settings to mark which roles are
 untrusted. Most checks only care if the resource is usable by
 untrusted roles.
 
@@ -47,7 +48,7 @@ each check if you like.
 
 -- USAGE --
 
-Navigate to Administer >> Reports >> Security Review to run the checklist.
+Navigate to Administer >> Reports >> Security review to run the checklist.
 
 If a check is enabled it will be run. You can enable or skip a check on this
 page only after it has been run. Clicking on the 'Details' link beside each
@@ -70,7 +71,7 @@ http://drupal.org/security/secure-configuration and http://crackingdrupal.org
 
 Growing Venture Solutions, the provider of this module, offers detailed,
 targetted security review and support for Drupal websites and can be contacted
-on our website at http://growingventuresolutions.com or via email at 
+at http://growingventuresolutions.com or via email at 
 contact@growingventuresolutions.com
 
 You can read more about our Drupal security review service at 

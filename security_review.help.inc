@@ -18,10 +18,10 @@ function _security_review_help() {
   $output .= '</p>';
   $output .= '<p>';
   $output .= t('You can read more about securing your site in the <a href="!do">drupal.org handbooks</a> and on <a href="!cd">CrackingDrupal.com</a>.
-    There are also many additional modules you can install to secure or protect your site. Be aware though that the more modules you have running on your site the greater (usually) attack area you expose.',
+    There are also additional modules you can install to secure or protect your site. Be aware though that the more modules you have running on your site the greater (usually) attack area you expose.',
     array('!do' => 'http://drupal.org/security/secure-configuration', '!cd' => 'http://crackingdrupal.com'));
   $output .= '</p>';
-  $output .= '<p>' . l(t('Drupal.org handbook introduction to security-related contrib modules'), 'http://drupal.org/node/382752') . '</p>';
+  $output .= '<p>' . l(t('Drupal.org Handbook: Introduction to security-related contrib modules'), 'http://drupal.org/node/382752') . '</p>';
   /*$output .= '<h3>' . t('Contrib modules for additional security and strength') . '</h3>';
   $output .= '<p>' . t('There are a wealth of modules on drupal.org.') . '</p>';
   $items[] = _security_review_help_ssl();
