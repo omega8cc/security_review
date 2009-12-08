@@ -276,7 +276,7 @@ function security_review_check_query_errors($last_check = NULL) {
     }
   }
   if (!empty($check_result_value)) {
-     $result = FALSE;
+    $result = FALSE;
   }
   else {
     // Rather than worrying the user about the idea of query errors we skip reporting a pass.
@@ -326,7 +326,7 @@ function security_review_check_failed_logins($last_check = NULL) {
     }
   }
   if (!empty($check_result_value)) {
-     $result = FALSE;
+    $result = FALSE;
   }
   else {
     // Rather than worrying the user about the idea of failed logins we skip reporting a pass.

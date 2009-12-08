@@ -480,6 +480,7 @@ function security_review_toggle_check($check_name) {
 
 /**
  * Helper function defines HTML tags that are considered unsafe.
+ * 
  * Based on wysiwyg_filter_get_elements_blacklist().
  */
 function security_review_unsafe_tags() {
@@ -532,10 +533,12 @@ function security_review_unsafe_extensions() {
     'html',
     'htm',
     'php',
+    'phtml',
+    'py',
     'js',
-    /*'zip',
-    'gzip',
-    'gz',*/
+    'vb',
+    'vbe',
+    'vbs',
   );
 }
 
