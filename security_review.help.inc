@@ -7,7 +7,7 @@
  */
 
 function _security_review_help() {
-  drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', 'module', 'header');
+  drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js');
   $output = '';
   $output .= '<p>';
   $output .= t('You should take the security of your site very seriously.
@@ -23,10 +23,10 @@ function _security_review_help() {
   $output .= '</p>';
   $output .= '<p>' . l(t('Drupal.org Handbook: Introduction to security-related contrib modules'), 'http://drupal.org/node/382752') . '</p>';
   /*$output .= '<h3>' . t('Contrib modules for additional security and strength') . '</h3>';
-  $output .= '<p>' . t('There are a wealth of modules on drupal.org.') . '</p>';
-  $items[] = _security_review_help_ssl();
-  $items[] = _security_review_help_spam();
-  $output .= theme('item_list', $items);*/
+   $output .= '<p>' . t('There are a wealth of modules on drupal.org.') . '</p>';
+   $items[] = _security_review_help_ssl();
+   $items[] = _security_review_help_spam();
+   $output .= theme('item_list', $items);*/
   return $output;
 }
 
@@ -43,7 +43,7 @@ function _security_review_help_ssl() {
       ),
     ),
   );
-  return theme('security_review_help_options', $element);
+  return theme('security_review_help_options', array('element' => $element));
 }
 
 function _security_review_help_spam() {
@@ -58,7 +58,7 @@ function _security_review_help_spam() {
       ),
     ),
   );
-  return theme('security_review_help_options', $element);
+  return theme('security_review_help_options', array('element' => $element));
 }
 
 function theme_security_review_help_options($element) {
@@ -69,7 +69,7 @@ function theme_security_review_help_options($element) {
   foreach ($element['options'] as $option) {
     $items[] = l($option['name'], $option['href']);
   }
-  $output .= theme('item_list', $items);
+  $output .= theme('item_list', array('items' => $items));
   $output .= '</div>';
   $output .= '</div>';
   return $output;

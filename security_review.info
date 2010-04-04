@@ -1,4 +1,8 @@
 ; $Id$
 name = Security Review
 description = "Site security and configuration review module."
-core = 6.x
+core = 7.x
+files[] = security_review.checks.inc
+files[] = security_review.help.inc
+files[] = security_review.install
+files[] = security_review.module

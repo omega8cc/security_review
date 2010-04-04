@@ -10,14 +10,23 @@
  */
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_permission().
  */
-function security_review_perm() {
-  return array('access security review list', 'run security checks');
+function security_review_permission() {
+  return array(
+    'access security review list' => array(
+      'title' => t('Access security review pages'),
+      'description' => t('View security review checks and output. Give only to trusted users.'),
+    ),
+    'run security checks' => array(
+      'title' => t('Run security review checks'),
+      'description' => t('Run the security review checks'),
+    ),
+  );
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function security_review_menu() {
   $items = array();
@@ -60,13 +69,13 @@ function security_review_menu() {
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  */
 function security_review_theme($existing, $type, $theme, $path) {
   return array(
-    'security_review_reviewed' => array('arguments' => array('items' => array())),
-    'security_review_help_options' => array('arguments' => array('element' => array())),
-    'security_review_check_help' => array('arguments' => array('element' => array())),
+    'security_review_reviewed' => array('variables' => array('items' => array())),
+    'security_review_help_options' => array('render element' => array('element' => array())),
+    'security_review_check_help' => array('render element' => array('element' => array())),
   );
 }
 
@@ -75,22 +84,22 @@ function security_review_theme($existing, $type, $theme, $path) {
  */
 function security_review_page() {
   $checks = array();
-  $output = '';
+  $output = array();
   // Retrieve the checklist.
   $checklist = module_invoke_all('security_checks');
   // Retrieve results from last run of the checklist.
-  $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
-  while ($result = db_fetch_array($results)) {
-    $checks[] = $result;
+  $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
+  foreach ($result as $record) {
+    $checks[] = $record;
   }
   // Only users with the proper permission can run the checklist.
   if (user_access('run security checks')) {
-    $output .= drupal_get_form('security_review_run_form', $checks);
+    $output += drupal_get_form('security_review_run_form', $checks);
   }
-  
+
   if (!empty($checks)) {
     // We have prior results, so display them.
-    $output .= security_review_reviewed($checklist, $checks);
+    $output['results'] = security_review_reviewed($checklist, $checks);
   }
   else {
     // If they haven't configured the site, prompt them to do so.
@@ -106,8 +115,12 @@ function security_review_page() {
  * Retrive the result from the last run of a security check.
  */
 function security_review_get_last_check($namespace, $check_name) {
-  $check = db_fetch_array(db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $namespace, $check_name));
-  return !empty($check) ? $check : NULL;
+  $fields = array('namespace', 'reviewcheck', 'result', 'lastrun', 'skip', 'skiptime', 'skipuid');
+  $result = db_select('security_review', 'sr')->fields('sr', $fields)
+    ->condition('namespace', $namespace)
+    ->condition('reviewcheck', $check_name)
+    ->execute()->fetchAssoc();
+  return !empty($result) ? $result : NULL;
 }
 
 /**
@@ -144,11 +157,11 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
     $checklist = module_invoke_all('security_checks');
     foreach ($checklist as $module => $checks) {
       foreach ($checks as $reviewcheck => $check) {
-        $items[] = l($check['title'] , 'admin/reports/security-review/help/' . $module . '/' . $reviewcheck);
+        $items[] = l($check['title'], 'admin/reports/security-review/help/' . $module . '/' . $reviewcheck);
       }
     }
     if ($items) {
-      $output .= theme('item_list', $items);
+      $output .= theme('item_list', array('items' => $items));
     }
   }
   if (empty($output)) {
@@ -158,33 +171,31 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
 }
 
 function security_review_reviewed($checklist, $checks, $namespace = NULL) {
-  $output = '';
-
   $header = t('Review results from last run');
   $desc = t("Here you can review the results from the last run of the checklist. Checks are not always perfectly correct in their procedure and result. You can keep a check from running by clicking the 'Skip' link beside it. You can run the checklist again by expanding the fieldset above.");
   foreach ($checks as $check) {
-    $message = $check['result'] ? $checklist[$check['namespace']][$check['reviewcheck']]['success'] : $checklist[$check['namespace']][$check['reviewcheck']]['failure'];
-    $class = $check['skip'] ? 'info' : ($check['result'] ? 'ok' : 'error');
-    $toggle = $check['skip'] ? t('Enable') : t('Skip');
-    $token = drupal_get_token($check['reviewcheck']);
+    $message = $check->result ? $checklist[$check->namespace][$check->reviewcheck]['success'] : $checklist[$check->namespace][$check->reviewcheck]['failure'];
+    $class = $check->skip ? 'info' : ($check->result ? 'ok' : 'error');
+    $toggle = $check->skip ? t('Enable') : t('Skip');
+    $token = drupal_get_token($check->reviewcheck);
     $link_options = array(
       'query' => array('token' => $token),
       'attributes' => array('class' => 'sec-rev-dyn'),
     );
     $items[] = array(
-      'value' => $check['result'],
+      'value' => $check->result,
       'class' => $class,
       'message' => $message,
-      'help_link' => l(t('Details'), 'admin/reports/security-review/help/' . $check['namespace'] . '/' . $check['reviewcheck']),
-      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/' . $check['reviewcheck'], $link_options),
+      'help_link' => l(t('Details'), 'admin/reports/security-review/help/' . $check->namespace . '/' . $check->reviewcheck),
+      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/' . $check->reviewcheck, $link_options),
     );
   }
-  $output .= theme('security_review_reviewed', $items, $header, $desc);
+  $output .= theme('security_review_reviewed', array('items' => $items, '' => $header, '' => $desc));
   return $output;
 }
 
 function theme_security_review_reviewed($items = array(), $header = '', $desc = '') {
-  drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', 'module', 'footer');
+  drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', array('scope' => 'footer'));
   $output = '<h3>' . $header . '</h3>';
   $output .= '<p>' . $desc . '</p>';
   $output .= '<table class="system-status-report">';
@@ -213,7 +224,7 @@ function theme_security_review_check_help($element) {
       $output .= '<p>' . $description . '</p>';
     }
     if (!empty($element['findings']['items'])) {
-      $output .= theme('item_list', $element['findings']['items']);
+      $output .= theme('item_list', array('items' => $element['findings']['items']));
     }
     if (!empty($element['findings']['pager'])) {
       $output .= $element['findings']['pager'];
@@ -279,7 +290,7 @@ function security_review_run($checklist) {
         }
         if ($return) {
           $check_result = array_merge($arguments, $return);
-          $check_result['lastrun'] = time();
+          $check_result['lastrun'] = REQUEST_TIME;
           // To log, or not to log?
           $log = variable_get('security_review_log', TRUE);
           if ($log) {
@@ -295,7 +306,10 @@ function security_review_run($checklist) {
         }
         elseif ($last_check) {
           // NA on recent check but we have an old check so delete it.
-          db_query("DELETE FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $module, $check_name);
+          $num_deleted = db_delete('security_review')
+            ->condition('namespace', $module)
+            ->condition('reviewcheck', $check_name)
+            ->execute();
           $check_result = $arguments;
           // To log, or not to log?
           $log = variable_get('security_review_log', TRUE);
@@ -327,9 +341,12 @@ function security_review_store_results($results) {
         'namespace' => $module,
         'reviewcheck' => $check_name,
         'result' => $check['result'],
-        'lastrun' => $check['lastrun'] ? $check['lastrun'] : time(),
+        'lastrun' => $check['lastrun'] ? $check['lastrun'] : REQUEST_TIME,
       );
-      db_query("DELETE FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $module, $check_name);
+      $num_deleted = db_delete('security_review')
+        ->condition('namespace', $module)
+        ->condition('reviewcheck', $check_name)
+        ->execute();
       if (drupal_write_record('security_review', $record) == SAVED_NEW) {
         $saved++;
       }
@@ -342,7 +359,7 @@ function security_review_store_results($results) {
 }
 
 /**
- * Implementation of hook_security_checks().
+ * Implements hook_security_checks().
  */
 function security_review_security_checks() {
   $checks['file_perms'] = array(
@@ -361,22 +378,22 @@ function security_review_security_checks() {
     'failure' => t('Untrusted users are allowed to input dangerous HTML tags.'),
     'file' => 'security_review.checks',
   );
-  $checks['nodes'] = array(
+  /*$checks['nodes'] = array(
     'title' => t('Content'),
     'type' => 'callback',
     'value' => 'security_review_check_nodes',
     'success' => t('Dangerous tags were not found in the body of any nodes.'),
     'failure' => t('Dangerous tags were found in the body of nodes.'),
     'file' => 'security_review.checks',
-  );
-  $checks['comments'] = array(
+  );*/
+  /*$checks['comments'] = array(
     'title' => t('Comments'),
     'type' => 'callback',
     'value' => 'security_review_check_comments',
     'success' => t('Dangerous tags were not found in any comments.'),
     'failure' => t('Dangerous tags were found in comments.'),
     'file' => 'security_review.checks',
-  );
+  );*/
   $checks['error_reporting'] = array(
     'title' => t('Error reporting'),
     'type' => 'callback',
@@ -385,14 +402,14 @@ function security_review_security_checks() {
     'failure' => t('Errors are written to the screen.'),
     'file' => 'security_review.checks',
   );
-  $checks['private_files'] = array(
+  /*$checks['private_files'] = array(
     'title' => t('Private files'),
     'type' => 'callback',
     'value' => 'security_review_check_private_files',
     'success' => t('Private files directory is outside the web server root.'),
     'failure' => t('Private files is enabled but the specified directory is not secure outside the web server root.'),
     'file' => 'security_review.checks',
-  );
+  );*/
   $checks['upload_extensions'] = array(
     'title' => t('Allowed upload extensions'),
     'type' => 'callback',
@@ -443,7 +460,11 @@ function security_review_toggle_check($check_name) {
   foreach ($checklist as $module => $checks) {
     if (in_array($check_name, array_keys($checks))) {
       $sql = "SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'";
-      $record = db_fetch_object(db_query($sql, $module, $check_name));
+      $query->db_select('security_review', 'sr')
+        ->fields('sr', array('namespace', 'reviewcheck', 'result', 'lastrun', 'skip', 'skiptime', 'skipuid'))
+        ->condition('namespace', $module, '=')
+        ->condition('reviewcheck', $check_name, '=');
+      $record = $query->execute()->fetchObject();
       // Toggle the skip.
       if ($record->skip) {
         // We were skipping, so stop skipping and clear skip identifiers.
@@ -455,7 +476,7 @@ function security_review_toggle_check($check_name) {
       else {
         // Start skipping and record who made the decision and when.
         $record->skip = TRUE;
-        $record->skiptime = time();
+        $record->skiptime = REQUEST_TIME;
         $record->skipuid = $user->uid;
         $message = '!name check skipped';
       }
@@ -470,7 +491,7 @@ function security_review_toggle_check($check_name) {
     }
   }
   if (isset($_GET['js']) && intval($_GET['js']) == 1) {
-    drupal_json($record);
+    drupal_json_output($record);
     return;
   }
   // We weren't invoked via JS so set a message and return to the review page.
@@ -480,7 +501,7 @@ function security_review_toggle_check($check_name) {
 
 /**
  * Helper function defines HTML tags that are considered unsafe.
- * 
+ *
  * Based on wysiwyg_filter_get_elements_blacklist().
  */
 function security_review_unsafe_tags() {
@@ -597,7 +618,7 @@ function security_review_settings() {
     '#options' => $options,
     '#default_value' => variable_get('security_review_untrusted_roles', $defaults),
   );
-  
+
   $form['security_review_adv'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advanced'),
@@ -618,9 +639,9 @@ function security_review_settings() {
  * Helper function creates message for reporting check skip information.
  */
 function _security_review_check_skipped($last_check) {
-  $account = user_load(array('uid' => $last_check['skipuid']));
+  $account = user_load_multiple(array($last_check['skipuid']));
   $time = format_date($last_check['skiptime'], 'medium');
-  $message = t('Check marked for skipping on !time by !user', array('!time' => $time, '!user' => theme('username', $account)));
+  $message = t('Check marked for skipping on !time by !user', array('!time' => $time, '!user' => theme('username', array('account' => $account))));
   return $message;
 }
 
@@ -629,8 +650,8 @@ function _security_review_check_skipped($last_check) {
  */
 function security_review_role_permission($rid, $permission) {
   $return = FALSE;
-  $result = db_fetch_array(db_query("SELECT perm FROM {permission} WHERE rid = %d", $rid));
-  if ($result['perm'] && strpos($result['perm'], $permission) !== FALSE) {
+  $result = db_select('role_permission', 'p')->fields('p', array('permission'))->condition('rid', $rid)->execute()->fetchField();
+  if ($result['permission'] && strpos($result['permission'], $permission) !== FALSE) {
     $return = TRUE;
   }
   return $return;

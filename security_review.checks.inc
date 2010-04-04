@@ -63,7 +63,7 @@ function security_review_check_file_perms_help() {
       $element['findings']['items'][] = check_plain($file);
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -72,12 +72,14 @@ function security_review_check_file_perms_help() {
  */
 function security_review_check_input_formats() {
   $result = TRUE;
-  $formats = filter_formats();
+  global $user;
+  $formats = filter_formats($user);
   $check_return_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
   foreach ($formats as $id => $format) {
-    $format_roles = array_filter(explode(',', $format->roles));
+    $format_roles = filter_get_roles_by_format($format);
+    //$format_roles = array_filter(explode(',', $roles));
     $intersect = array_intersect($format_roles, $untrusted_roles);
     if (!empty($intersect)) {
       // Untrusted users can use this format.
@@ -122,7 +124,7 @@ function security_review_check_input_formats_help() {
   elseif ($last_check['result'] == '0') {
     $return = security_review_check_input_formats();
     if (!empty($return['value']['tags'])) {
-      $element['findings']['descriptions'][] = t('<a href="!link">Review your input formats.</a>', array('!link' => url('admin/settings/filters')));
+      $element['findings']['descriptions'][] = t('<a href="!link">Review your input formats.</a>', array('!link' => url('admin/config/content/filter')));
       $element['findings']['descriptions'][] = t('It is recommended you remove the following tags from roles accessible by untrusted users.');
       foreach ($return['value']['tags'] as $tag) {
         $element['findings']['items'][] = $tag; // Tag doesn't need filtering cause it's not user-defined.
@@ -131,11 +133,11 @@ function security_review_check_input_formats_help() {
     elseif (!empty($return['value']['formats'])) {
       $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter allowed HTML tags.');
       foreach ($return['value']['formats'] as $id => $name) {
-        $element['findings']['items'][] = l($name, 'admin/settings/filters/' . $id);
+        $element['findings']['items'][] = l($name, 'admin/config/content/filter/' . $id);
       }
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -157,9 +159,9 @@ function security_review_check_error_reporting_help() {
   $return = security_review_check_error_reporting();
   if ($return['result'] === FALSE) {
     $element['findings']['descriptions'][] = t('You have error reporting set to both the screen and the log.');
-    $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/settings/error-reporting')));
+    $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/config/error-reporting')));
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -200,9 +202,9 @@ function security_review_check_private_files_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('Your files directory is not outside of the server root.');
-    $element['findings']['descriptions'][] = t('<a href="!link">Edit the files directory path.</a>', array('!link' => url('admin/settings/file-system')));
+    $element['findings']['descriptions'][] = t('<a href="!link">Edit the files directory path.</a>', array('!link' => url('admin/config/file-system')));
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -243,28 +245,29 @@ function security_review_check_upload_extensions_help() {
   }
   elseif ($last_check['result'] == '0') {
     $return = security_review_check_upload_extensions();
-    $element['findings']['descriptions'][] = t('<a href="!link">Alter file upload settings.</a>', array('!link' => url('admin/settings/uploads')));
+    $element['findings']['descriptions'][] = t('<a href="!link">Alter file upload settings.</a>', array('!link' => url('admin/config/uploads')));
     $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
     foreach ($return['value'] as $extension) {
       $element['findings']['items'][] = $extension;
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
 function security_review_check_query_errors($last_check = NULL) {
   $timestamp = NULL;
   $check_result_value = array();
-  $sql = "SELECT message, hostname FROM {watchdog} WHERE type = 'php' AND severity = %d";
+  $query = db_select('watchdog', 'w')->fields('w', array('message', 'hostname'))
+    ->condition('type', 'php')
+    ->condition('severity', WATCHDOG_ERROR);
   if (!is_null($last_check)) {
-    $sql .= " AND timestamp >= %d";
-    $timestamp = $last_check['lastrun'];
+    $query->condition('timestamp', $last_check['lastrun'], '>=');
   }
-  $results = db_query($sql, WATCHDOG_ERROR, $timestamp);
-  while ($row = db_fetch_array($results)) {
-    if (strpos($row['message'], 'SELECT') !== FALSE) {
-      $entries[$row['hostname']][] = $row;
+  $result = $query->execute();
+  foreach ($result as $row) {
+    if (strpos($row->message, 'SELECT') !== FALSE) {
+      $entries[$row->hostname][] = $row;
     }
   }
   $result = TRUE;
@@ -299,7 +302,7 @@ function security_review_check_query_errors_help() {
       $element['findings']['items'][] = check_plain($ip);
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -307,15 +310,16 @@ function security_review_check_failed_logins($last_check = NULL) {
   $result = TRUE;
   $timestamp = NULL;
   $check_result_value = array();
-  $sql = "SELECT message, hostname FROM {watchdog} WHERE type = 'user' AND severity = %d";
+  $query = db_select('watchdog', 'w')->fields('w', array('message', 'hostname'))
+    ->condition('type', 'php')
+    ->condition('severity', WATCHDOG_NOTICE);
   if (!is_null($last_check)) {
-    $sql .= " AND timestamp >= %d";
-    $timestamp = $last_check['lastrun'];
+    $query->condition('timestamp', $last_check['lastrun'], '>=');
   }
-  $results = db_query($sql, WATCHDOG_NOTICE, $timestamp);
-  while ($row = db_fetch_array($results)) {
-    if (strpos($row['message'], 'Login attempt failed') !== FALSE) {
-      $entries[$row['hostname']][] = $row;
+  $result = $query->execute();
+  foreach ($result as $row) {
+    if (strpos($row->message, 'Login attempt failed') !== FALSE) {
+      $entries[$row->hostname][] = $row;
     }
   }
   if (!empty($entries)) {
@@ -350,7 +354,7 @@ function security_review_check_failed_logins_help() {
       $element['findings']['items'][] = check_plain($ip);
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -364,9 +368,12 @@ function security_review_check_permissions() {
   $admin_perms = security_review_admin_permissions();
   foreach ($untrusted_roles as $rid) {
     $perms = array();
-    $results = db_fetch_array(db_query('SELECT r.rid, p.perm FROM {role} r LEFT JOIN {permission} p ON r.rid = p.rid WHERE r.rid = %d', $rid));
+    $query = db_select('role', 'r')->fields('r', array('rid'))
+      ->condition('r.rid', $rid);
+    $query->leftJoin('role_permission', 'p', 'r.rid = p.rid');
+    $results = $query->execute()->fetchAssoc();
     if ($results !== FALSE) {
-      $perms = explode(',', str_replace(', ', ',', $results['perm']));
+      $perms = explode(',', str_replace(', ', ',', $results['permission']));
       $intersect = array_intersect($perms, $admin_perms);
       if (!empty($intersect)) {
         $check_result_value[$rid] = $intersect;
@@ -391,20 +398,26 @@ function security_review_check_permissions_help() {
     $return = security_review_check_permissions();
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
     foreach ($return['value'] as $rid => $permissions) {
-      $role = db_fetch_array(db_query("SELECT name FROM {role} WHERE rid = %d", $rid));
+      $role = db_select('role', 'r')->fields('r', array('name'))
+      ->condition('rid', $rid)
+      ->execute()->fetchField();
       $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $role['name'], '%permissions' => implode(', ', $permissions)));
       $element['findings']['items'][] = $item;
     }
   }
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
 function security_review_check_nodes($last_check = NULL) {
+  // @todo move to checking fields?
   $result = TRUE;
   $check_result_value = array();
   $timestamp = NULL;
-  $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%<script%' OR r.body LIKE '%<?php%'";
+  /*$sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%<script%' OR r.body LIKE '%<?php%'";
+  $query = db_select('node', 'n')->fields('n', 'nid')
+    ->join('node_revision', 'r', 'n.vid = r.vid')
+    ->condition();*/
   if (!is_null($last_check)) {
     $sql .= " AND n.changed >= %d";
     $timestamp = $last_check['lastrun'];
@@ -436,10 +449,10 @@ function security_review_check_nodes_help() {
       $node = node_load($nid);
       $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit');
     }
-    $element['findings']['pager'] = theme('pager', NULL, 50);
+    $element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
 
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
 
@@ -479,15 +492,15 @@ function security_review_check_comments_help() {
     $element['findings']['descriptions'][] = t('The following comments have dangerous tags. The links go to the edit page.');
     $return = security_review_check_comments(); // Don't pass $last_check because timestamp is wrong now.
     foreach ($return['value'] as $cid => $nid) {
-      $comment = _comment_load($cid);
+      $comment = comment_load($cid);
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
       $title = t('!subject on !title', array('!subject' => $comment->subject, '!title' => $node->title));
       $element['findings']['items'][] = l($title, 'comment/edit/' . $cid);
     }
-    $element['findings']['pager'] = theme('pager', NULL, 20);
+    $element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
 
-  $output = theme('security_review_check_help', $element);
+  $output = theme('security_review_check_help', array('element' => $element));
   return $output;
 }
