@@ -13,6 +13,7 @@ function security_review_drush_command() {
   
   $items['security-review'] = array(
     'callback' => 'security_review_drush',
+    'aliases' => array('secrev'),
     'description' => "Run the Security Review checklist",
   );
   $items['rainbow-load'] = array(
@@ -87,7 +88,7 @@ function security_review_drush_hash_load() {
       while (!feof($handle)) {
         $buffer = fgets($handle, 4096);
         $word = trim($buffer);
-        $hash = md5($hash);
+        $hash = md5($word);
         $sql = "INSERT INTO {security_review_rainbow} (hash_word, hash_hash) VALUES ('%s', '%s')";
         db_query($sql, $word, $hash);
         $count++;
