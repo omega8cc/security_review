@@ -434,7 +434,7 @@ function security_review_check_nodes_help() {
     foreach ($return['value'] as $nid) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
-      $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit');
+      $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit', array('query' => drupal_get_destination()));
     }
     $element['findings']['pager'] = theme('pager', NULL, 50);
   }
@@ -483,7 +483,7 @@ function security_review_check_comments_help() {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
       $title = t('!subject on !title', array('!subject' => $comment->subject, '!title' => $node->title));
-      $element['findings']['items'][] = l($title, 'comment/edit/' . $cid);
+      $element['findings']['items'][] = l($title, 'comment/edit/' . $cid, array('query' => drupal_get_destination()));
     }
     $element['findings']['pager'] = theme('pager', NULL, 20);
   }
