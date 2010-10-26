@@ -76,9 +76,17 @@ function security_review_check_input_formats() {
   $check_return_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
+  // The default format is usable by all users even if no roles are listed on it.
+  $default_format = variable_get('filter_default_format', FILTER_FORMAT_DEFAULT);
   foreach ($formats as $id => $format) {
     $format_roles = array_filter(explode(',', $format->roles));
-    $intersect = array_intersect($format_roles, $untrusted_roles);
+    if ($format->format == $default_format) {
+      // The default format is available to all roles.
+      $intersect = drupal_map_assoc(array_keys(user_roles()));
+    }
+    else {
+      $intersect = array_intersect($format_roles, $untrusted_roles);
+    }
     if (!empty($intersect)) {
       // Untrusted users can use this format.
       $filters = filter_list_format($format->format);
@@ -129,7 +137,7 @@ function security_review_check_input_formats_help() {
       }
     }
     elseif (!empty($return['value']['formats'])) {
-      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter allowed HTML tags.');
+      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter allowed HTML tags. The default filter will have all roles checked.');
       foreach ($return['value']['formats'] as $id => $name) {
         $element['findings']['items'][] = l($name, 'admin/settings/filters/' . $id);
       }
