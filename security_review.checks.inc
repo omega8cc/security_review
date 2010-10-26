@@ -412,17 +412,20 @@ function security_review_check_nodes($last_check = NULL) {
   $result = TRUE;
   $check_result_value = array();
   $timestamp = NULL;
-  $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%<script%' OR r.body LIKE '%<?php%'";
+  
+  $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%s' ";
   if (!is_null($last_check)) {
     $sql .= " AND n.changed >= %d";
     $timestamp = $last_check['lastrun'];
   }
-  $results = pager_query($sql, 50, 0, NULL, $timestamp);
-  while ($row = db_fetch_array($results)) {
-    $check_result_value[] = $row['nid'];
-  }
-  if (!empty($check_result_value)) {
-    $result = FALSE;
+  foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $description => $comparison) {
+    $results = pager_query($sql, 50, 0, NULL, $comparison, $timestamp);
+    while ($row = db_fetch_array($results)) {
+      $check_result_value[] = array($description => $row['nid']);
+    }
+    if (!empty($check_result_value)) {
+      $result = FALSE;
+    }
   }
 
   return array('result' => $result, 'value' => $check_result_value);
@@ -440,10 +443,10 @@ function security_review_check_nodes_help() {
     $element['findings']['descriptions'][] = t('The following nodes potentially have dangerous tags. The links go to the edit page.');
     $return = security_review_check_nodes(); // Don't pass $last_check because timestamp is wrong now.
     $destination = drupal_get_destination();
-    foreach ($return['value'] as $nid) {
+    foreach ($return['value'] as $problem_nid) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
-      $node = node_load($nid);
-      $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit', array('query' => $destination));
+      $node = node_load(current($problem_nid));
+      $element['findings']['items'][][] = t('@description found in <a href="!link">@title</a>', array('@description' => key($problem_nid), '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
     }
     $element['findings']['pager'] = theme('pager', NULL, 50);
   }
@@ -457,17 +460,19 @@ function security_review_check_comments($last_check = NULL) {
   $check_result_value = array();
   $timestamp = NULL;
   if (module_exists('comment')) {
-    $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%<script%' OR comment LIKE '%<?php%'";
+    $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%s'" ;
     if (!is_null($last_check)) {
       $sql .= " AND timestamp >= %d";
       $timestamp = $last_check['lastrun'];
     }
-    $results = pager_query($sql, 20, 0, NULL, $timestamp);
-    while ($row = db_fetch_array($results)) {
-      $check_result_value[$row['cid']] = $row['nid'];
-    }
-    if (!empty($check_result_value)) {
-      $result = FALSE;
+    foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $description => $comparison) {
+      $results = pager_query($sql, 20, 0, NULL, $comparison, $timestamp);
+      while ($row = db_fetch_array($results)) {
+        $check_result_value[$row['cid']] = array($description => $row['nid']);
+      }
+      if (!empty($check_result_value)) {
+        $result = FALSE;
+      }
     }
   }
   else {
