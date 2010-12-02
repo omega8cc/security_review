@@ -127,9 +127,10 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
         if (isset($check['file'])) {
           module_load_include('inc', $module, $check['file']);
         }
-        $function = $check['value'] . '_help';
+        $function = $check['callback'] . '_help';
         if (function_exists($function)) {
-          $output = $function();
+          $element = $function();
+          $output = theme('security_review_check_help', $element);
         }
       }
     }
@@ -241,7 +242,7 @@ function security_review_run_form($form_state, $checks = NULL) {
 function security_review_run_form_submit($form, &$form_state) {
   $checklist = module_invoke_all('security_checks');
 
-  $result = security_review_run($checklist);
+  $result = security_review_run_store($checklist);
   if ($result !== FALSE) {
     drupal_set_message(t('Review complete'));
   }
@@ -252,9 +253,69 @@ function security_review_run_form_submit($form, &$form_state) {
 }
 
 /**
- * Run the security review checklist.
+ * Run the security review checklist and store the results.
  */
-function security_review_run($checklist) {
+function security_review_run_store($checklist, $log = NULL) {
+  // Allow callers, like our drush command, to decide not to log.
+  if (is_null($log)) {
+    $log = variable_get('security_review_log', TRUE);
+  }
+  // Call our private function to perform the actual review.
+  $results = _security_review_run($checklist, $log);
+
+  // Store all results in our present table.
+  $saved = $to_save = 0;
+  foreach ($results as $module => $checks) {
+    foreach ($checks as $check_name => $check) {
+      $to_save++;
+      $record = array(
+        'namespace' => $module,
+        'reviewcheck' => $check_name,
+        'result' => $check['result'],
+        'lastrun' => $check['lastrun'] ? $check['lastrun'] : time(),
+      );
+      db_query("DELETE FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $module, $check_name);
+      if (drupal_write_record('security_review', $record) == SAVED_NEW) {
+        $saved++;
+      }
+      elseif ($log) {
+        watchdog('security_review', 'Unable to store check !reviewcheck for !namespace', array('!reviewcheck' => $check_name, '!namespace' => $module), WATCHDOG_ERROR );
+      }
+    }
+  }
+  return ($to_save == $saved) ? TRUE : FALSE;
+}
+
+/**
+ * Run the security review checklist and return the full results.
+ */
+function security_review_run_full($checklist, $log = NULL) {
+  // Allow callers, like our drush command, to decide not to log.
+  if (is_null($log)) {
+    $log = variable_get('security_review_log', TRUE);
+  }
+  // Call our private function to perform the actual review.
+  $results = _security_review_run($checklist, $log);
+
+  // Fill out the descriptions of the results.
+  foreach ($results as $module => $checks) {
+    foreach ($checks as $check_name => $check) {
+      $function = $check['callback'] . '_help';
+      // We should have loaded all necessary include files.
+      if (function_exists($function)) {
+        $element = call_user_func($function, $check);
+        // @todo run through theme?
+        $results[$module][$check_name]['help'] = $element;
+      }
+    }
+  }
+  return $results;
+}
+
+/**
+ * Private function performs the review and returns the full results.
+ */
+function _security_review_run($checklist, $log) {
   $results = array();
   foreach ($checklist as $module => $checks) {
     foreach ($checks as $check_name => $arguments) {
@@ -268,7 +329,7 @@ function security_review_run($checklist) {
             if (isset($arguments['file'])) {
               module_load_include('inc', $module, $arguments['file']);
             }
-            $function = $arguments['value'];
+            $function = $arguments['callback'];
             if (function_exists($function)) {
               $return = call_user_func($function, $last_check);
               if (is_null($return)) {
@@ -280,8 +341,7 @@ function security_review_run($checklist) {
         if ($return) {
           $check_result = array_merge($arguments, $return);
           $check_result['lastrun'] = time();
-          // To log, or not to log?
-          $log = variable_get('security_review_log', TRUE);
+
           if ($log) {
             $variables = array('!name' => $check_result['title']);
             if ($check_result['result']) {
@@ -297,8 +357,7 @@ function security_review_run($checklist) {
           // NA on recent check but we have an old check so delete it.
           db_query("DELETE FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $module, $check_name);
           $check_result = $arguments;
-          // To log, or not to log?
-          $log = variable_get('security_review_log', TRUE);
+
           if ($log) {
             $message = '!name no longer applicable for checking';
             _security_review_log($module, $check_name, $message, array('!name' => $check_result['title']), WATCHDOG_INFO);
@@ -307,38 +366,17 @@ function security_review_run($checklist) {
       }
     }
   }
-  if (!empty($results)) {
-    // Store all results in our present table.
-    $storage_result = security_review_store_results($results);
-  }
-  return $storage_result;
+
+  return $results;
 }
 
+/**
+ * Internal log helper function.
+ *
+ * Separated from directly using watchdg() in other functions to allow for extended reporting.
+ */
 function _security_review_log($module, $check_name, $message, $variables, $type) {
   watchdog('security_review', $message, $variables, $type);
-}
-
-function security_review_store_results($results) {
-  $saved = $to_save = 0;
-  foreach ($results as $module => $checks) {
-    foreach ($checks as $check_name => $check) {
-      $to_save++;
-      $record = array(
-        'namespace' => $module,
-        'reviewcheck' => $check_name,
-        'result' => $check['result'],
-        'lastrun' => $check['lastrun'] ? $check['lastrun'] : time(),
-      );
-      db_query("DELETE FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'", $module, $check_name);
-      if (drupal_write_record('security_review', $record) == SAVED_NEW) {
-        $saved++;
-      }
-      else {
-        watchdog('security_review', 'Unable to store check !reviewcheck for !namespace', array('!reviewcheck' => $check_name, '!namespace' => $module), WATCHDOG_ERROR );
-      }
-    }
-  }
-  return ($to_save == $saved) ? TRUE : FALSE;
 }
 
 /**
@@ -348,7 +386,7 @@ function security_review_security_checks() {
   $checks['file_perms'] = array(
     'title' => t('File system permissions'),
     'type' => 'callback',
-    'value' => 'security_review_check_file_perms',
+    'callback' => 'security_review_check_file_perms',
     'success' => t('Drupal installation files and directories (except required) are not writable by the server.'),
     'failure' => t('Some files and directories in your install are writable by the server.'),
     'file' => 'security_review.checks',
@@ -356,7 +394,7 @@ function security_review_security_checks() {
   $checks['input_formats'] = array(
     'title' => t('Input formats'),
     'type' => 'callback',
-    'value' => 'security_review_check_input_formats',
+    'callback' => 'security_review_check_input_formats',
     'success' => t('Untrusted users are not allowed to input dangerous HTML tags.'),
     'failure' => t('Untrusted users are allowed to input dangerous HTML tags.'),
     'file' => 'security_review.checks',
@@ -364,7 +402,7 @@ function security_review_security_checks() {
   $checks['nodes'] = array(
     'title' => t('Content'),
     'type' => 'callback',
-    'value' => 'security_review_check_nodes',
+    'callback' => 'security_review_check_nodes',
     'success' => t('Dangerous tags were not found in the body of any nodes.'),
     'failure' => t('Dangerous tags were found in the body of nodes.'),
     'file' => 'security_review.checks',
@@ -372,7 +410,7 @@ function security_review_security_checks() {
   $checks['comments'] = array(
     'title' => t('Comments'),
     'type' => 'callback',
-    'value' => 'security_review_check_comments',
+    'callback' => 'security_review_check_comments',
     'success' => t('Dangerous tags were not found in any comments.'),
     'failure' => t('Dangerous tags were found in comments.'),
     'file' => 'security_review.checks',
@@ -380,7 +418,7 @@ function security_review_security_checks() {
   $checks['error_reporting'] = array(
     'title' => t('Error reporting'),
     'type' => 'callback',
-    'value' => 'security_review_check_error_reporting',
+    'callback' => 'security_review_check_error_reporting',
     'success' => t('Error reporting set to log only.'),
     'failure' => t('Errors are written to the screen.'),
     'file' => 'security_review.checks',
@@ -388,7 +426,7 @@ function security_review_security_checks() {
   $checks['private_files'] = array(
     'title' => t('Private files'),
     'type' => 'callback',
-    'value' => 'security_review_check_private_files',
+    'callback' => 'security_review_check_private_files',
     'success' => t('Private files directory is outside the web server root.'),
     'failure' => t('Private files is enabled but the specified directory is not secure outside the web server root.'),
     'file' => 'security_review.checks',
@@ -396,7 +434,7 @@ function security_review_security_checks() {
   $checks['upload_extensions'] = array(
     'title' => t('Allowed upload extensions'),
     'type' => 'callback',
-    'value' => 'security_review_check_upload_extensions',
+    'callback' => 'security_review_check_upload_extensions',
     'success' => t('Only safe extensions are allowed for uploaded files.'),
     'failure' => t('Unsafe file extensions are allowed in uploads.'),
     'file' => 'security_review.checks',
@@ -404,7 +442,7 @@ function security_review_security_checks() {
   $checks['query_errors'] = array(
     'title' => t('Database errors'),
     'type' => 'callback',
-    'value' => 'security_review_check_query_errors',
+    'callback' => 'security_review_check_query_errors',
     'success' => t('Few query errors from the same IP.'),
     'failure' => t('Query errors from the same IP. These may be a SQL injection attack or an attempt at information disclosure.'),
     'file' => 'security_review.checks',
@@ -412,7 +450,7 @@ function security_review_security_checks() {
   $checks['failed_logins'] = array(
     'title' => t('Failed logins'),
     'type' => 'callback',
-    'value' => 'security_review_check_failed_logins',
+    'callback' => 'security_review_check_failed_logins',
     'success' => t('Few failed login attempts from the same IP.'),
     'failure' => t('Failed login attempts from the same IP. These may be a brute-force attack to gain access to your site.'),
     'file' => 'security_review.checks',
@@ -420,7 +458,7 @@ function security_review_security_checks() {
   $checks['permissions'] = array(
     'title' => t('Drupal permissions'),
     'type' => 'callback',
-    'value' => 'security_review_check_permissions',
+    'callback' => 'security_review_check_permissions',
     'success' => t('Untrusted roles do not have administrative permissions.'),
     'failure' => t('Untrusted roles have been granted administrative permissions.'),
     'file' => 'security_review.checks',
