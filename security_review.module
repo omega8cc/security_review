@@ -531,10 +531,10 @@ function security_review_security_checks() {
     'failure' => t('Failed login attempts from the same IP. These may be a brute-force attack to gain access to your site.'),
     'file' => 'security_review.checks',
   );
-  $checks['permissions'] = array(
-    'title' => t('Drupal permissions'),
+  $checks['admin_permissions'] = array(
+    'title' => t('Drupal admin permissions'),
     'type' => 'callback',
-    'callback' => 'security_review_check_permissions',
+    'callback' => 'security_review_check_admin_permissions',
     'success' => t('Untrusted roles do not have administrative permissions.'),
     'failure' => t('Untrusted roles have been granted administrative permissions.'),
     'file' => 'security_review.checks',

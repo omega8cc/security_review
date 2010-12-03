@@ -389,7 +389,7 @@ function security_review_check_failed_logins_help($results = NULL) {
 /**
  * Look for admin permissions granted to untrusted roles.
  */
-function security_review_check_permissions() {
+function security_review_check_admin_permissions() {
   $result = TRUE;
   $check_result_value = array();
   $untrusted_roles = security_review_untrusted_roles();
@@ -411,17 +411,17 @@ function security_review_check_permissions() {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_permissions_help($results = NULL) {
-  $element['title'] = t('Permissions');
+function security_review_check_admin_permissions_help($results = NULL) {
+  $element['title'] = t('Admin permissions');
   $element['descriptions'][] = t("Drupal's permission system is extensive and allows for varying degrees of control. Certain permissions would allow a user total control, or the ability to escalate their control, over your site and should only be granted to trusted users.");
   $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on CrackingDrupal.com.</a>', array('!link' => url('http://crackingdrupal.com/blog/ben-jeavons/importance-user-roles-and-permissions-site-security')));
-  $last_check = security_review_get_last_check('security_review', 'permissions');
+  $last_check = security_review_get_last_check('security_review', 'admin_permissions');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
     if (is_null($results)) {
-      $results = security_review_check_permissions();
+      $results = security_review_check_admin_permissions();
     }
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
     foreach ($results['value'] as $rid => $permissions) {
