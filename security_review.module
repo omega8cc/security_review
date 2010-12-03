@@ -205,16 +205,36 @@ function theme_security_review_reviewed($items = array(), $header = '', $desc = 
  * Calling function should filter and sanitize.
  */
 function theme_security_review_check_help($element) {
-  $output = '<h3>' . $element['title'] . '</h3>';
+  $output = "<h3>" . $element['title'] . "</h3>\n";
   foreach ($element['descriptions'] as $description) {
-    $output .= '<p>' . $description . '</p>';
+    $output .= "<p>" . $description . "</p>\n";
   }
   if (!empty($element['findings'])) {
     foreach ($element['findings']['descriptions'] as $description) {
-      $output .= '<p>' . $description . '</p>';
+      $output .= "<p>" . $description . "</p>\n";
     }
     if (!empty($element['findings']['items'])) {
-      $output .= theme('item_list', $element['findings']['items']);
+      $items = $element['findings']['items'];
+      $output .= "<ul>\n";
+      // Loop through items outputting the best value HTML, safe, or raw if thats all there is.
+      foreach ($items as $item) {
+        if (is_array($item)) {
+          if (isset($item['html'])) {
+            $data = $item['html'];
+          }
+          elseif (isset($item['safe'])) {
+            $data = $item['safe'];
+          }
+          else {
+            $data = $item['raw'];
+          }
+        }
+        else {
+          $data = $item;
+        }
+        $output .= "<li>" . $data . "</li>\n";
+      }
+      $output .= "</ul>\n";
     }
     if (!empty($element['findings']['pager'])) {
       $output .= $element['findings']['pager'];

@@ -62,7 +62,10 @@ function security_review_check_file_perms_help($result = NULL) {
     }
     $element['findings']['descriptions'][] = t('It is recommended that the following files or directories be corrected.');
     foreach ($result['value'] as $file) {
-      $element['findings']['items'][] = check_plain($file);
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($file),
+        'raw' => $file,
+      );
     }
   }
   return $element;
@@ -136,13 +139,20 @@ function security_review_check_input_formats_help($result = NULL) {
       $element['findings']['descriptions'][] = t('<a href="!link">Review your input formats.</a>', array('!link' => url('admin/settings/filters')));
       $element['findings']['descriptions'][] = t('It is recommended you remove the following tags from roles accessible by untrusted users.');
       foreach ($result['value']['tags'] as $tag) {
-        $element['findings']['items'][] = $tag; // Tag doesn't need filtering cause it's not user-defined.
+        $element['findings']['items'][] = array(
+          'safe' => $tag, // Tag doesn't need filtering cause it's not user-defined.
+          'raw' => $tag,
+        );
       }
     }
     elseif (!empty($result['value']['formats'])) {
       $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter allowed HTML tags. The default filter will have all roles checked.');
       foreach ($result['value']['formats'] as $id => $name) {
-        $element['findings']['items'][] = l($name, 'admin/settings/filters/' . $id);
+        $element['findings']['items'][] = array(
+          'html' => l($name, 'admin/settings/filters/' . $id),
+          'safe' => check_plain($name),
+          'raw' => $name,
+        );
       }
     }
   }
@@ -258,7 +268,10 @@ function security_review_check_upload_extensions_help($result = NULL) {
     $element['findings']['descriptions'][] = t('<a href="!link">Alter file upload settings.</a>', array('!link' => url('admin/settings/uploads')));
     $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
     foreach ($result['value'] as $extension) {
-      $element['findings']['items'][] = $extension;
+      $element['findings']['items'][] = array(
+        'raw' => $extension,
+        'safe' => check_plain($extension),
+      );
     }
   }
   return $element;
@@ -309,7 +322,10 @@ function security_review_check_query_errors_help($result = NULL) {
       $result = security_review_check_query_errors();
     }
     foreach ($result['value'] as $ip) {
-      $element['findings']['items'][] = check_plain($ip);
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($ip),
+        'raw' => $ip,
+      );
     }
   }
   return $element;
@@ -361,7 +377,10 @@ function security_review_check_failed_logins_help($results = NULL) {
       $results = security_review_check_failed_logins();
     }
     foreach ($results['value'] as $ip) {
-      $element['findings']['items'][] = check_plain($ip);
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($ip),
+        'raw' => $ip,
+      );
     }
   }
   return $element;
@@ -407,8 +426,14 @@ function security_review_check_permissions_help($results = NULL) {
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
     foreach ($results['value'] as $rid => $permissions) {
       $role = db_fetch_array(db_query("SELECT name FROM {role} WHERE rid = %d", $rid));
-      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $role['name'], '%permissions' => implode(', ', $permissions)));
-      $element['findings']['items'][] = $item;
+      $permissions = implode(', ', $permissions);
+      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $role['name'], '%permissions' => $permissions));
+      $safe = t('@name has %permissions', array('@name' => $role['name'], $permissions));
+      $element['findings']['items'][] = array(
+        'html' => $item,
+        'safe' => $safe,
+        'raw' => $role['name'] . ':' . $permissions,
+      );
     }
   }
   return $element;
@@ -454,7 +479,14 @@ function security_review_check_nodes_help($results = NULL) {
     foreach ($results['value'] as $problem_nid) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load(current($problem_nid));
-      $element['findings']['items'][][] = t('@description found in <a href="!link">@title</a>', array('@description' => key($problem_nid), '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
+      $description = key($problem_nid);
+      $html = t('@description found in <a href="!link">@title</a>', array('@description' => $description, '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
+      $url = url('node/' . $node->nid . '/edit');
+      $element['findings']['items'][] = array(
+        'html' => $html, 
+        'safe' => t('@description in !url', array('@description' => $description, '!url' => $url)),
+        'raw' => $description . ':' . $url,
+      );
     }
     $element['findings']['pager'] = theme('pager', NULL, 50);
   }
@@ -507,7 +539,11 @@ function security_review_check_comments_help($results = NULL) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
       $title = t('!subject on !title', array('!subject' => $comment->subject, '!title' => $node->title));
-      $element['findings']['items'][] = l($title, 'comment/edit/' . $cid, array('query' => $destination));
+      $element['findings']['items'][] = array(
+        'html' => l($title, 'comment/edit/' . $cid, array('query' => $destination)),
+        'safe' => check_plain($title),
+        'raw' => $title . ':' . url('comment/edit/' . $cid),
+      );
     }
     $element['findings']['pager'] = theme('pager', NULL, 20);
   }
