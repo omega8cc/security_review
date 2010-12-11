@@ -13,7 +13,7 @@
 function security_review_check_file_perms() {
   $result = TRUE;
   // Extract ending folder for file directory path.
-  $file_path = rtrim(file_directory_path(), '/');
+  $file_path = rtrim(variable_get('file_public_path', conf_path() . '/files'), '/');
   $file_path = substr($file_path, strrpos($file_path, '/') + 1);
   // Set files to ignore.
   $ignore = array('..', 'CVS', $file_path);
@@ -77,26 +77,23 @@ function security_review_check_input_formats() {
   $check_return_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
+  $untrusted_roles = array_keys($untrusted_roles);
   foreach ($formats as $id => $format) {
     $format_roles = filter_get_roles_by_format($format);
-    //$format_roles = array_filter(explode(',', $roles));
-    $intersect = array_intersect($format_roles, $untrusted_roles);
+    $intersect = array_intersect(array_keys($format_roles), $untrusted_roles);
     if (!empty($intersect)) {
       // Untrusted users can use this format.
       $filters = filter_list_format($format->format);
       // Check format for HTML filter.
-      if (in_array('filter/0', array_keys($filters))) {
-        // Using HTML Filter, good! Now check allowed tags if the filter is stripping instead of escaping.
-        $setting = variable_get("filter_html_" . $format->format, FILTER_HTML_STRIP);
-        if ($setting == FILTER_HTML_STRIP) {
-          // Check for unsafe tags in allowed tags.
-          $allowed_tags = variable_get("allowed_html_" . $format->format, '');
-          $unsafe_tags = security_review_unsafe_tags();
-          foreach ($unsafe_tags as $tag) {
-            if (strpos($allowed_tags, '<' . $tag . '>') !== FALSE) {
-              // Found an unsafe tag
-              $check_return_value['tags'][$id] = $tag;
-            }
+      if (in_array('filter_html', array_keys($filters))) {
+        $filter = $filters['filter_html'];
+        // Check for unsafe tags in allowed tags.
+        $allowed_tags = $filter->settings['allowed_html'];
+        $unsafe_tags = security_review_unsafe_tags();
+        foreach ($unsafe_tags as $tag) {
+          if (strpos($allowed_tags, '<' . $tag . '>') !== FALSE) {
+            // Found an unsafe tag
+            $check_return_value['tags'][$id] = $tag;
           }
         }
       }
@@ -143,8 +140,8 @@ function security_review_check_input_formats_help() {
 
 function security_review_check_error_reporting() {
   $error_level = variable_get('error_level', NULL);
-  if (is_null($error_level) || intval($error_level) == 1) {
-    // When the variable isn't set, or its set to 1 errors are printed to the screen.
+  if (is_null($error_level) || intval($error_level) >= 1) {
+    // When the variable isn't set, or its set to 1 or 2 errors are printed to the screen.
     $result = FALSE;
   }
   else {
@@ -366,20 +363,16 @@ function security_review_check_permissions() {
   $check_result_value = array();
   $untrusted_roles = security_review_untrusted_roles();
   $admin_perms = security_review_admin_permissions();
-  foreach ($untrusted_roles as $rid) {
-    $perms = array();
-    $query = db_select('role', 'r')->fields('r', array('rid'))
-      ->condition('r.rid', $rid);
-    $query->leftJoin('role_permission', 'p', 'r.rid = p.rid');
-    $results = $query->execute()->fetchAssoc();
-    if ($results !== FALSE) {
-      $perms = explode(',', str_replace(', ', ',', $results['permission']));
-      $intersect = array_intersect($perms, $admin_perms);
-      if (!empty($intersect)) {
-        $check_result_value[$rid] = $intersect;
-      }
+  // Get permissions for untrusted roles.
+  $role_permissions = user_role_permissions($untrusted_roles);
+  foreach ($role_permissions as $rid => $permissions) {
+    $permissions = array_keys($permissions);
+    $intersect = array_intersect($admin_perms, $permissions);
+    if (!empty($intersect)) {
+      $check_result_value[$rid] = $intersect;
     }
   }
+
   if (!empty($check_result_value)) {
     $result = FALSE;
   }

@@ -73,7 +73,7 @@ function security_review_menu() {
  */
 function security_review_theme($existing, $type, $theme, $path) {
   return array(
-    'security_review_reviewed' => array('variables' => array('items' => array())),
+    'security_review_reviewed' => array('variables' => array('items' => array(), 'header' => '', 'description' => '')),
     'security_review_help_options' => array('render element' => array('element' => array())),
     'security_review_check_help' => array('render element' => array('element' => array())),
   );
@@ -171,10 +171,12 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
 }
 
 function security_review_reviewed($checklist, $checks, $namespace = NULL) {
+  $items = array();
   $header = t('Review results from last run');
   $desc = t("Here you can review the results from the last run of the checklist. Checks are not always perfectly correct in their procedure and result. You can keep a check from running by clicking the 'Skip' link beside it. You can run the checklist again by expanding the fieldset above.");
   foreach ($checks as $check) {
     $message = $check->result ? $checklist[$check->namespace][$check->reviewcheck]['success'] : $checklist[$check->namespace][$check->reviewcheck]['failure'];
+    $title = $check->result ? t('OK') : t('Error');
     $class = $check->skip ? 'info' : ($check->result ? 'ok' : 'error');
     $toggle = $check->skip ? t('Enable') : t('Skip');
     $token = drupal_get_token($check->reviewcheck);
@@ -183,6 +185,7 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
       'attributes' => array('class' => 'sec-rev-dyn'),
     );
     $items[] = array(
+      'title' => $title,
       'value' => $check->result,
       'class' => $class,
       'message' => $message,
@@ -190,20 +193,25 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
       'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/' . $check->reviewcheck, $link_options),
     );
   }
-  $output .= theme('security_review_reviewed', array('items' => $items, '' => $header, '' => $desc));
-  return $output;
+  $output = theme('security_review_reviewed', array('items' => $items, 'header' => $header, 'description' => $desc));
+  // @todo #markup?
+  return array('#markup' => $output);
 }
 
-function theme_security_review_reviewed($items = array(), $header = '', $desc = '') {
+function theme_security_review_reviewed($variables) {
   drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', array('scope' => 'footer'));
-  $output = '<h3>' . $header . '</h3>';
-  $output .= '<p>' . $desc . '</p>';
+  $output = '<h3>' . $variables['header'] . '</h3>';
+  $output .= '<p>' . $variables['description'] . '</p>';
   $output .= '<table class="system-status-report">';
-  foreach ($items as $item) {
-    $output .= '<tr class="' . $item['class'] . '"><th>' . $item['message'] . '</th>';
-    $output .= '<td>' . $item['help_link'] . '</td>';
-    $output .= '<td>' . $item['toggle_link'] . '</td>';
-    $output .= '</tr>';
+  if (!empty($variables['items'])) {
+    foreach ($variables['items'] as $item) {
+      $output .= '<tr class="' . $item['class'] . '">';
+      $output .= '<td class="status-icon"><div title="' . $item['title'] . '"><span class="element-invisible">' . $item['title'] . '</span></div></td>';
+      $output .= '<td>' . $item['message'] . '</td>';
+      $output .= '<td>' . $item['help_link'] . '</td>';
+      $output .= '<td>' . $item['toggle_link'] . '</td>';
+      $output .= '</tr>';
+    }
   }
   $output .= '</table>';
   return $output;
@@ -362,14 +370,14 @@ function security_review_store_results($results) {
  * Implements hook_security_checks().
  */
 function security_review_security_checks() {
-  $checks['file_perms'] = array(
+  /*$checks['file_perms'] = array(
     'title' => t('File system permissions'),
     'type' => 'callback',
     'value' => 'security_review_check_file_perms',
     'success' => t('Drupal installation files and directories (except required) are not writable by the server.'),
     'failure' => t('Some files and directories in your install are writable by the server.'),
     'file' => 'security_review.checks',
-  );
+  );*/
   $checks['input_formats'] = array(
     'title' => t('Input formats'),
     'type' => 'callback',
@@ -566,21 +574,24 @@ function security_review_unsafe_extensions() {
 /**
  * Helper function defines the default untrusted Drupal roles.
  */
-function security_review_default_untrusted_roles() {
-  $rids = array(DRUPAL_ANONYMOUS_RID);
+function _security_review_default_untrusted_roles() {
+  $roles = array(DRUPAL_ANONYMOUS_RID => t('anonymous user'));
   $user_register = variable_get('user_register', 1);
   if ($user_register == 1) {
-    $rids[] = DRUPAL_AUTHENTICATED_RID;
+    $roles[DRUPAL_AUTHENTICATED_RID] = t('authenticated user');
   }
-  return $rids;
+  return $roles;
 }
 
 /**
  * Helper function for user-defined or default unstrusted Drupal roles.
+ *
+ * @return An associative array with the role id as the key and the role name as value.
  */
 function security_review_untrusted_roles() {
-  $defaults = security_review_default_untrusted_roles();
+  $defaults = _security_review_default_untrusted_roles();
   $roles = variable_get('security_review_untrusted_roles', $defaults);
+  // array_filter() to remove roles with 0 (meaning they are trusted) @todo
   return array_filter($roles);
 }
 
@@ -606,8 +617,8 @@ function security_review_settings() {
     $options[$rid] = check_plain($role);
   }
   $message = '';
-  $defaults = security_review_default_untrusted_roles();
-  if (in_array(DRUPAL_AUTHENTICATED_RID, $defaults)) {
+  $defaults = _security_review_default_untrusted_roles();
+  if (array_key_exists(DRUPAL_AUTHENTICATED_RID, $defaults)) {
     $message = 'You have allowed anonymous users to create accounts without approval, the authenticated role thus defaults to untrusted.';
   }
 
