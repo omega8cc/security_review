@@ -74,8 +74,8 @@ function security_review_menu() {
 function security_review_theme($existing, $type, $theme, $path) {
   return array(
     'security_review_reviewed' => array('variables' => array('items' => array(), 'header' => '', 'description' => '')),
-    'security_review_help_options' => array('render element' => array('element' => array())),
-    'security_review_check_help' => array('render element' => array('element' => array())),
+    'security_review_help_options' => array('variables' => array('element' => array())),
+    'security_review_check_help' => array('variables' => array('element' => array())),
   );
 }
 
@@ -142,7 +142,8 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
         }
         $function = $check['value'] . '_help';
         if (function_exists($function)) {
-          $output = $function();
+          $element = $function();
+          $output = theme('security_review_check_help', array('element' => $element));
         }
       }
     }
@@ -167,7 +168,7 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
   if (empty($output)) {
     return drupal_not_found();
   }
-  return $output;
+  return array('#markup' => $output);
 }
 
 function security_review_reviewed($checklist, $checks, $namespace = NULL) {
@@ -182,7 +183,7 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
     $token = drupal_get_token($check->reviewcheck);
     $link_options = array(
       'query' => array('token' => $token),
-      'attributes' => array('class' => 'sec-rev-dyn'),
+      //'attributes' => array('class' => 'use-ajax'),
     );
     $items[] = array(
       'title' => $title,
@@ -190,7 +191,7 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
       'class' => $class,
       'message' => $message,
       'help_link' => l(t('Details'), 'admin/reports/security-review/help/' . $check->namespace . '/' . $check->reviewcheck),
-      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/' . $check->reviewcheck, $link_options),
+      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/nojs/' . $check->reviewcheck, $link_options),
     );
   }
   $output = theme('security_review_reviewed', array('items' => $items, 'header' => $header, 'description' => $desc));
@@ -199,7 +200,8 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
 }
 
 function theme_security_review_reviewed($variables) {
-  drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', array('scope' => 'footer'));
+  // @todo
+  //drupal_add_js(drupal_get_path('module', 'security_review') . '/security_review.js', array('scope' => 'footer'));
   $output = '<h3>' . $variables['header'] . '</h3>';
   $output .= '<p>' . $variables['description'] . '</p>';
   $output .= '<table class="system-status-report">';
@@ -222,7 +224,8 @@ function theme_security_review_reviewed($variables) {
  *
  * Calling function should filter and sanitize.
  */
-function theme_security_review_check_help($element) {
+function theme_security_review_check_help($variables) {
+  $element = $variables['element'];
   $output = '<h3>' . $element['title'] . '</h3>';
   foreach ($element['descriptions'] as $description) {
     $output .= '<p>' . $description . '</p>';
@@ -370,16 +373,16 @@ function security_review_store_results($results) {
  * Implements hook_security_checks().
  */
 function security_review_security_checks() {
-  /*$checks['file_perms'] = array(
+  $checks['file_perms'] = array(
     'title' => t('File system permissions'),
     'type' => 'callback',
     'value' => 'security_review_check_file_perms',
     'success' => t('Drupal installation files and directories (except required) are not writable by the server.'),
     'failure' => t('Some files and directories in your install are writable by the server.'),
     'file' => 'security_review.checks',
-  );*/
+  );
   $checks['input_formats'] = array(
-    'title' => t('Input formats'),
+    'title' => t('Text formats'),
     'type' => 'callback',
     'value' => 'security_review_check_input_formats',
     'success' => t('Untrusted users are not allowed to input dangerous HTML tags.'),
@@ -410,20 +413,12 @@ function security_review_security_checks() {
     'failure' => t('Errors are written to the screen.'),
     'file' => 'security_review.checks',
   );
-  /*$checks['private_files'] = array(
+  $checks['private_files'] = array(
     'title' => t('Private files'),
     'type' => 'callback',
     'value' => 'security_review_check_private_files',
     'success' => t('Private files directory is outside the web server root.'),
     'failure' => t('Private files is enabled but the specified directory is not secure outside the web server root.'),
-    'file' => 'security_review.checks',
-  );*/
-  $checks['upload_extensions'] = array(
-    'title' => t('Allowed upload extensions'),
-    'type' => 'callback',
-    'value' => 'security_review_check_upload_extensions',
-    'success' => t('Only safe extensions are allowed for uploaded files.'),
-    'failure' => t('Unsafe file extensions are allowed in uploads.'),
     'file' => 'security_review.checks',
   );
   $checks['query_errors'] = array(
@@ -457,7 +452,7 @@ function security_review_security_checks() {
 /**
  * Menu callback and Javascript callback for check skip toggling.
  */
-function security_review_toggle_check($check_name) {
+function security_review_toggle_check($type = 'ajax', $check_name) {
   global $user;
   if (!drupal_valid_token($_GET['token'], $check_name)) {
     return drupal_access_denied();
@@ -467,8 +462,8 @@ function security_review_toggle_check($check_name) {
   $checklist = module_invoke_all('security_checks');
   foreach ($checklist as $module => $checks) {
     if (in_array($check_name, array_keys($checks))) {
-      $sql = "SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'";
-      $query->db_select('security_review', 'sr')
+      //$sql = "SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'";
+      $query = db_select('security_review', 'sr')
         ->fields('sr', array('namespace', 'reviewcheck', 'result', 'lastrun', 'skip', 'skiptime', 'skipuid'))
         ->condition('namespace', $module, '=')
         ->condition('reviewcheck', $check_name, '=');
@@ -498,13 +493,15 @@ function security_review_toggle_check($check_name) {
       break;
     }
   }
-  if (isset($_GET['js']) && intval($_GET['js']) == 1) {
+  if ($type == 'ajax') {
     drupal_json_output($record);
     return;
   }
-  // We weren't invoked via JS so set a message and return to the review page.
-  drupal_set_message(t('Check will be skipped'));
-  drupal_goto('admin/reports/security-review');
+  else {
+    // We weren't invoked via JS so set a message and return to the review page.
+    drupal_set_message(t($message, array('!name' => $checks[$check_name]['title'])));
+    drupal_goto('admin/reports/security-review');
+  }
 }
 
 /**
@@ -650,7 +647,7 @@ function security_review_settings() {
  * Helper function creates message for reporting check skip information.
  */
 function _security_review_check_skipped($last_check) {
-  $account = user_load_multiple(array($last_check['skipuid']));
+  $account = array_pop(user_load_multiple(array($last_check['skipuid'])));
   $time = format_date($last_check['skiptime'], 'medium');
   $message = t('Check marked for skipping on !time by !user', array('!time' => $time, '!user' => theme('username', array('account' => $account))));
   return $message;

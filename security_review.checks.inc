@@ -63,8 +63,7 @@ function security_review_check_file_perms_help() {
       $element['findings']['items'][] = check_plain($file);
     }
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 /**
@@ -111,7 +110,7 @@ function security_review_check_input_formats() {
 }
 
 function security_review_check_input_formats_help() {
-  $element['title'] = t('Allowed HTML tags in input formats');
+  $element['title'] = t('Allowed HTML tags in text formats');
   $element['descriptions'][] = t("Certain HTML tags can allow an attacker to take control of your site. Drupal's input format system makes use of a set filters to run on incoming text. The 'HTML Filter' strips out harmful tags and Javascript events and should be used on all formats accessible by untrusted users.");
   $element['descriptions'][] = t("<a href='!link'>Read more about Drupal's input formats in the handbooks.</a>", array('!link' => url('http://drupal.org/node/224921')));
   $last_check = security_review_get_last_check('security_review', 'input_formats');
@@ -121,7 +120,7 @@ function security_review_check_input_formats_help() {
   elseif ($last_check['result'] == '0') {
     $return = security_review_check_input_formats();
     if (!empty($return['value']['tags'])) {
-      $element['findings']['descriptions'][] = t('<a href="!link">Review your input formats.</a>', array('!link' => url('admin/config/content/filter')));
+      $element['findings']['descriptions'][] = t('<a href="!link">Review your text formats.</a>', array('!link' => url('admin/config/content/formats')));
       $element['findings']['descriptions'][] = t('It is recommended you remove the following tags from roles accessible by untrusted users.');
       foreach ($return['value']['tags'] as $tag) {
         $element['findings']['items'][] = $tag; // Tag doesn't need filtering cause it's not user-defined.
@@ -134,8 +133,7 @@ function security_review_check_input_formats_help() {
       }
     }
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 function security_review_check_error_reporting() {
@@ -158,8 +156,7 @@ function security_review_check_error_reporting_help() {
     $element['findings']['descriptions'][] = t('You have error reporting set to both the screen and the log.');
     $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/config/error-reporting')));
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 /**
@@ -168,9 +165,11 @@ function security_review_check_error_reporting_help() {
  * There is ample room for the user to get around this check. @TODO get more sophisticated?
  */
 function security_review_check_private_files() {
-  $file_downloads = variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC);
-  if ($file_downloads == FILE_DOWNLOADS_PRIVATE) {
-    $file_directory_path = file_directory_path();
+  // Get the default download method.
+  $scheme = variable_get('file_default_scheme', '');
+  // Most insecure configurations will be using the local private wrapper.
+  if ($scheme == 'private') {
+    $file_directory_path = variable_get('file_private_path', '');
     if (strpos($file_directory_path, '/') === 0) {
       // Path begins at root.
       $result = TRUE;
@@ -199,57 +198,9 @@ function security_review_check_private_files_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('Your files directory is not outside of the server root.');
-    $element['findings']['descriptions'][] = t('<a href="!link">Edit the files directory path.</a>', array('!link' => url('admin/config/file-system')));
+    $element['findings']['descriptions'][] = t('<a href="!link">Edit the files directory path.</a>', array('!link' => url('admin/config/media/file-system')));
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
-}
-
-/**
- * Check for unsafe allowed extensions.
- */
-function security_review_check_upload_extensions() {
-  $result = TRUE;
-  $check_return_value = array();
-  if (module_exists('upload')) {
-    // First, check if any unsafe extensions are even allowed.
-    $extensions = variable_get('upload_extensions_default', NULL);
-    if (!is_null($extensions)) {
-      $unsafe_extensions = security_review_unsafe_extensions();
-      foreach ($unsafe_extensions as $unsafe_extension) {
-        if (strpos($extensions, $unsafe_extension) !== FALSE) {
-          // Found an unsafe extension.
-          $check_return_value[] = $unsafe_extension;
-        }
-      }
-    }
-    if (!empty($check_return_value)) {
-      $result = FALSE;
-    }
-  }
-  else {
-    return NULL;
-  }
-  return array('result' => $result, 'value' => $check_return_value);
-}
-
-function security_review_check_upload_extensions_help() {
-  $element['title'] = t('Allowed upload extensions');
-  $element['descriptions'][] = t("The upload module allows users to attach files to content. Some extensions are considered dangerous because the files can be evaluated and then executued in the browser. A malicious user could use this opening to gain control of your site.");
-  $last_check = security_review_get_last_check('security_review', 'upload_extensions');
-  if ($last_check['skip'] == '1') {
-    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
-  }
-  elseif ($last_check['result'] == '0') {
-    $return = security_review_check_upload_extensions();
-    $element['findings']['descriptions'][] = t('<a href="!link">Alter file upload settings.</a>', array('!link' => url('admin/config/uploads')));
-    $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
-    foreach ($return['value'] as $extension) {
-      $element['findings']['items'][] = $extension;
-    }
-  }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 function security_review_check_query_errors($last_check = NULL) {
@@ -299,8 +250,7 @@ function security_review_check_query_errors_help() {
       $element['findings']['items'][] = check_plain($ip);
     }
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 function security_review_check_failed_logins($last_check = NULL) {
@@ -351,8 +301,7 @@ function security_review_check_failed_logins_help() {
       $element['findings']['items'][] = check_plain($ip);
     }
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 /**
@@ -389,17 +338,14 @@ function security_review_check_permissions_help() {
   }
   elseif ($last_check['result'] == '0') {
     $return = security_review_check_permissions();
+    $roles = user_roles();
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
     foreach ($return['value'] as $rid => $permissions) {
-      $role = db_select('role', 'r')->fields('r', array('name'))
-      ->condition('rid', $rid)
-      ->execute()->fetchField();
-      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $role['name'], '%permissions' => implode(', ', $permissions)));
+      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $roles[$rid], '%permissions' => implode(', ', $permissions)));
       $element['findings']['items'][] = $item;
     }
   }
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 function security_review_check_nodes($last_check = NULL) {
@@ -445,8 +391,7 @@ function security_review_check_nodes_help() {
     $element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
 
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }
 
 function security_review_check_comments($last_check = NULL) {
@@ -494,6 +439,5 @@ function security_review_check_comments_help() {
     $element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
 
-  $output = theme('security_review_check_help', array('element' => $element));
-  return $output;
+  return $element;
 }

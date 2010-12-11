@@ -20,13 +20,13 @@ Place the security_review directory and its contents under sites/all/modules or
 under an appropriate sites/ directory if you are using Drupal's multisite
 capabilities.
 
-Enable the module at Administer >> Site building >> Modules and refer to the
+Enable the module at Administer >> Modules and refer to the
 following sections for configuration and usage.
 
 -- CONFIGURATION --
 
 Two permissions are provided and required to use the module. Navigate to
-Administer >> User management >> Permissions to enable
+Administer >> People >> Permissions to enable
 'access security review list' and 'run security checks' for trusted roles.
 
 NOTICE: This module provides information on the state of your site's security so
