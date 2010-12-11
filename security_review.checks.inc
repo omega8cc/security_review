@@ -47,7 +47,7 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
   return $items;
 }
 
-function security_review_check_file_perms_help() {
+function security_review_check_file_perms_help($result = NULL) {
   $element['title'] =  t("Web server file system permissions");
   $element['descriptions'][] = t("It is dangerous to allow the web server to write to files inside the document root of your server. Doing so would allow Drupal to write files that could then be executed. An attacker might use such a vulnerability to take control of your site. An exception is the files directory which Drupal needs permission to write to in order to provide features like file attachments.");
   $element['descriptions'][] = t("<a href='!link'>Read more about file system permissions in the handbooks.</a>", array('!link' => url('http://drupal.org/node/244924')));
@@ -57,10 +57,15 @@ function security_review_check_file_perms_help() {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $return = security_review_check_file_perms();
+    if (is_null($result)) {
+      $result = security_review_check_file_perms();
+    }
     $element['findings']['descriptions'][] = t('It is recommended that the following files or directories be corrected.');
-    foreach ($return['value'] as $file) {
-      $element['findings']['items'][] = check_plain($file);
+    foreach ($result['value'] as $file) {
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($file),
+        'raw' => $file,
+      );
     }
   }
   return $element;
@@ -83,8 +88,8 @@ function security_review_check_input_formats() {
     if (!empty($intersect)) {
       // Untrusted users can use this format.
       $filters = filter_list_format($format->format);
-      // Check format for HTML filter.
-      if (in_array('filter_html', array_keys($filters))) {
+      // Check format for enabled HTML filter.
+      if (in_array('filter_html', array_keys($filters)) && $filters['filter_html']->status) {
         $filter = $filters['filter_html'];
         // Check for unsafe tags in allowed tags.
         $allowed_tags = $filter->settings['allowed_html'];
@@ -96,9 +101,9 @@ function security_review_check_input_formats() {
           }
         }
       }
-      else {
-        // Format is usable by untrusted users but does not contain the HTML Filter.
-        $check_return_value['formats'][$id] = $format->name;
+      elseif (!in_array('filter_html_escape', array_keys($filters)) || !$filters['filter_html_escape']->status) {
+        // Format is usable by untrusted users but does not contain the HTML Filter or the HTML escape.
+        $check_return_value['formats'][$id] = $format;
       }
     }
   }
@@ -118,18 +123,27 @@ function security_review_check_input_formats_help() {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $return = security_review_check_input_formats();
-    if (!empty($return['value']['tags'])) {
+    if (is_null($result)) {
+      $result = security_review_check_input_formats();
+    }
+    if (!empty($result['value']['tags'])) {
       $element['findings']['descriptions'][] = t('<a href="!link">Review your text formats.</a>', array('!link' => url('admin/config/content/formats')));
       $element['findings']['descriptions'][] = t('It is recommended you remove the following tags from roles accessible by untrusted users.');
-      foreach ($return['value']['tags'] as $tag) {
-        $element['findings']['items'][] = $tag; // Tag doesn't need filtering cause it's not user-defined.
+      foreach ($result['value']['tags'] as $tag) {
+        $element['findings']['items'][] = array(
+          'safe' => $tag, // Tag doesn't need filtering cause it's not user-defined.
+          'raw' => $tag,
+        );
       }
     }
-    elseif (!empty($return['value']['formats'])) {
-      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter allowed HTML tags.');
-      foreach ($return['value']['formats'] as $id => $name) {
-        $element['findings']['items'][] = l($name, 'admin/config/content/filter/' . $id);
+    elseif (!empty($result['value']['formats'])) {
+      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter or escape allowed HTML tags.');
+      foreach ($result['value']['formats'] as $id => $format) {
+        $element['findings']['items'][] = array(
+          'html' => l($format->name, 'admin/config/content/formats/' . $format->format),
+          'safe' => check_plain($format->name),
+          'raw' => $format->name,
+        );
       }
     }
   }
@@ -148,11 +162,13 @@ function security_review_check_error_reporting() {
   return array('result' => $result);
 }
 
-function security_review_check_error_reporting_help() {
+function security_review_check_error_reporting_help($result = NULL) {
   $element['title'] = t('Error reporting');
   $element['descriptions'][] = t('As a form of hardening your site you should avoid information disclosure. Drupal by default prints errors to the screen and writes them to the log. Error messages disclose the full path to the file where the error occured.');
-  $return = security_review_check_error_reporting();
-  if ($return['result'] === FALSE) {
+  if (is_null($result)) {
+    $result = security_review_check_error_reporting();
+  }
+  if ($result['result'] === FALSE) {
     $element['findings']['descriptions'][] = t('You have error reporting set to both the screen and the log.');
     $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/config/error-reporting')));
   }
@@ -189,7 +205,7 @@ function security_review_check_private_files() {
   return array('result' => $result);
 }
 
-function security_review_check_private_files_help() {
+function security_review_check_private_files_help($result = NULL) {
   $element['title'] = t('Private files');
   $element['descriptions'][] = t("If you have Drupal's private files feature enabled you should move the files directory outside of the web server's document root. While Drupal will control serving files when requested by way of content if a user knows the actual system path they can circumvent Drupal's private files feature. You can protect against this by specifying a files directory outside of the webserver root.");
   $last_check = security_review_get_last_check('security_review', 'private_files');
@@ -236,7 +252,7 @@ function security_review_check_query_errors($last_check = NULL) {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_query_errors_help() {
+function security_review_check_query_errors_help($result = NULL) {
   $element['title'] = t('Abundant query errors from the same IP');
   $element['descriptions'][] = t("Database errors triggered from the same IP may be an artifact of a malicious user attempting to probe the system for weaknesses like SQL injection or information disclosure.");
   $last_check = security_review_get_last_check('security_review', 'query_errors');
@@ -245,9 +261,14 @@ function security_review_check_query_errors_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('The following IPs were observed with an abundance of query errors.');
-    $return = security_review_check_query_errors();
-    foreach ($return['value'] as $ip) {
-      $element['findings']['items'][] = check_plain($ip);
+    if (is_null($result)) {
+      $result = security_review_check_query_errors();
+    }
+    foreach ($result['value'] as $ip) {
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($ip),
+        'raw' => $ip,
+      );
     }
   }
   return $element;
@@ -286,7 +307,7 @@ function security_review_check_failed_logins($last_check = NULL) {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_failed_logins_help() {
+function security_review_check_failed_logins_help($results = NULL) {
   $element['title'] = t('Abundant failed logins from the same IP');
   $element['descriptions'][] = t("Failed login attempts from the same IP may be an artifact of a malicous user attempting to brute-force their way onto your site as an authenticated user to carry out nefarious deeds. ");
 
@@ -296,9 +317,14 @@ function security_review_check_failed_logins_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('The following IPs were observed with an abundanced of failed login attempts.');
-    $return = security_review_check_failed_logins();
-    foreach ($return['value'] as $ip) {
-      $element['findings']['items'][] = check_plain($ip);
+    if (is_null($results)) {
+      $results = security_review_check_failed_logins();
+    }
+    foreach ($results['value'] as $ip) {
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($ip),
+        'raw' => $ip,
+      );
     }
   }
   return $element;
@@ -307,7 +333,7 @@ function security_review_check_failed_logins_help() {
 /**
  * Look for admin permissions granted to untrusted roles.
  */
-function security_review_check_permissions() {
+function security_review_check_admin_permissions() {
   $result = TRUE;
   $check_result_value = array();
   $untrusted_roles = security_review_untrusted_roles();
@@ -328,21 +354,29 @@ function security_review_check_permissions() {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_permissions_help() {
-  $element['title'] = t('Permissions');
+function security_review_check_admin_permissions_help($results = NULL) {
+  $element['title'] = t('Admin permissions');
   $element['descriptions'][] = t("Drupal's permission system is extensive and allows for varying degrees of control. Certain permissions would allow a user total control, or the ability to escalate their control, over your site and should only be granted to trusted users.");
   $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on CrackingDrupal.com.</a>', array('!link' => url('http://crackingdrupal.com/blog/ben-jeavons/importance-user-roles-and-permissions-site-security')));
-  $last_check = security_review_get_last_check('security_review', 'permissions');
+  $last_check = security_review_get_last_check('security_review', 'admin_permissions');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $return = security_review_check_permissions();
+    if (is_null($results)) {
+      $results = security_review_check_admin_permissions();
+    }
     $roles = user_roles();
     $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
-    foreach ($return['value'] as $rid => $permissions) {
-      $item = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/user/permissions/' . $rid), '@name' => $roles[$rid], '%permissions' => implode(', ', $permissions)));
-      $element['findings']['items'][] = $item;
+    foreach ($results['value'] as $rid => $permissions) {
+      $permissions = implode(', ', $permissions);
+      $html = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/people/permissions/' . $rid), '@name' => $roles[$rid], '%permissions' => $permissions));
+      $safe = t('@name has %permissions', array('@name' => $roles[$rid], $permissions));
+      $element['findings']['items'][] = array(
+        'html' => $html,
+        'safe' => $safe,
+        'raw' => $roles[$rid] . ':' . $permissions,
+      );
     }
   }
   return $element;
@@ -372,7 +406,7 @@ function security_review_check_nodes($last_check = NULL) {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_nodes_help() {
+function security_review_check_nodes_help($results = NULL) {
   $element['title'] = t('Dangerous tags in nodes');
   $element['descriptions'][] = t("Script and PHP code in the body of nodes does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such content from the body of nodes.");
 
@@ -382,11 +416,19 @@ function security_review_check_nodes_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('The following nodes potentially have dangerous tags. The links go to the edit page.');
-    $return = security_review_check_nodes(); // Don't pass $last_check because timestamp is wrong now.
-    foreach ($return['value'] as $nid) {
+    if (is_null($results)) {
+      $results = security_review_check_nodes(); // Don't pass $last_check because timestamp is wrong now.
+    }
+    foreach ($results['value'] as $nid) {
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);
-      $element['findings']['items'][][] = l($node->title, 'node/' . $node->nid . '/edit');
+      $html = t('@description found in <a href="!link">@title</a>', array('@description' => $description, '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
+      $url = url('node/' . $node->nid . '/edit');
+      $element['findings']['items'][] = array(
+        'html' => $html, 
+        'safe' => t('@description in !url', array('@description' => $description, '!url' => $url)),
+        'raw' => $description . ':' . $url,
+      );
     }
     $element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
@@ -418,7 +460,7 @@ function security_review_check_comments($last_check = NULL) {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
-function security_review_check_comments_help() {
+function security_review_check_comments_help($results = NULL) {
   $element['title'] = t('Dangerous tags in comments');
   $element['descriptions'][] = t("There is little reason for script and PHP tags to be in comments (unless they are code examples) and could be in use maliciously.");
 
@@ -428,8 +470,10 @@ function security_review_check_comments_help() {
   }
   elseif ($last_check['result'] == '0') {
     $element['findings']['descriptions'][] = t('The following comments have dangerous tags. The links go to the edit page.');
-    $return = security_review_check_comments(); // Don't pass $last_check because timestamp is wrong now.
-    foreach ($return['value'] as $cid => $nid) {
+    if (is_null($results)) {
+      $results = security_review_check_comments(); // Don't pass $last_check because timestamp is wrong now.
+    }
+    foreach ($results['value'] as $cid => $nid) {
       $comment = comment_load($cid);
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $node = node_load($nid);

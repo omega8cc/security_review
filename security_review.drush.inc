@@ -13,11 +13,13 @@ function security_review_drush_command() {
   
   $items['security-review'] = array(
     'callback' => 'security_review_drush',
+    'aliases' => array('secrev'),
     'description' => "Run the Security Review checklist",
   );
-  $items['rainbow-load'] = array(
-    'callback' => 'security_review_drush_hash_load',
-    'description' => "Create and load a rainbow table",
+  $items['password-check-setup'] = array(
+    'callback' => 'security_review_drush_hash_setup',
+    'aliases' => array('passset'),
+    'description' => "Create and load a rainbow table for password checking",
   );
   
   return $items;
@@ -30,7 +32,7 @@ function security_review_drush_help($section) {
   switch ($section) {
     case 'drush:security-review':
       return dt("Run configuration security checks on your Drupal site.");
-    case 'drush:rainbow-load':
+    case 'drush:password-check-setup':
       return dt("Creates a table and fills it with dictionary words for rainbow testing.");
   }
 }
@@ -69,17 +71,37 @@ function security_review_drush() {
   }
 }
 
-function security_review_drush_hash_load() {
+function security_review_drush_hash_setup() {
   $args = func_get_args();
   if (empty($args)) {
     drush_die('Filename required');
   }
   if (file_exists($args[0])) {
-    // @todo move to .install.
-    $sql = "CREATE TABLE IF NOT EXISTS security_review_rainbow (hash_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, hash_word VARCHAR(20) NOT NULL, hash_hash VARCHAR(32))";
-    db_query($sql);
-    drush_log(dt("Truncating security_review_rainbow table"), 'success');
-    db_query("TRUNCATE TABLE {security_review_rainbow}");
+    $ret = array();
+    // Create the rainbow table.
+    if (!db_table_exists('security_review_rainbow')) {
+      $schema = array(
+        'fields' => array(
+          'hash_id' => array(
+            'type' => 'serial',
+          ),
+          'hash_word' => array(
+            'type' => 'varchar',
+            'length' => 20,
+          ),
+          'hash_hash' => array(
+            'type' => 'varchar',
+            'length' => 32,
+          ),
+        ),
+        'primary key' => array('hash_id'),
+        'indexes' => array('hash_hash' => array('hash_hash')),
+      );
+      db_create_table($ret, 'security_review_rainbow', $schema);
+    }
+    // Put an index on users.pass.
+    db_drop_index($ret, 'users', 'pass'); // Drop in case this has already run.
+    db_add_index($ret, 'users', 'pass', array('pass'));
     
     $handle = fopen($args[0], 'r');
     if ($handle) {
