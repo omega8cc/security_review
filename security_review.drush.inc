@@ -50,20 +50,20 @@ function security_review_drush() {
     $result = security_review_run($checklist);
   }
   else {
-    // Retrieve results from run of the checklist.
-    $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
-    while ($result = db_fetch_array($results)) {
-      $checks[] = $result;
+    // Retrieve results from last run of the checklist.
+    $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
+    foreach ($result as $record) {
+      $checks[] = $record;
     }
     
     $rows = array();
     foreach ($checks as $check) {
-      if ($check['result']) {
-        $message = $checklist[$check['namespace']][$check['reviewcheck']]['success'];
+      if ($check->result) {
+        $message = $checklist[$check->namespace][$check->reviewcheck]['success'];
         $status = 'success';
       }
       else {
-        $message = $checklist[$check['namespace']][$check['reviewcheck']]['failure'];
+        $message = $checklist[$check->namespace][$check->reviewcheck]['failure'];
         $status = 'error';
       }
       drush_log($message, $status);
