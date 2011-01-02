@@ -445,7 +445,8 @@ function security_review_check_nodes($last_check = NULL) {
   $timestamp = NULL;
   
   $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%s' ";
-  if (!is_null($last_check)) {
+  // If the check passed before only look at nodes since the last run.
+  if (!is_null($last_check) && $last_check['result'] == '1') {
     $sql .= " AND n.changed >= %d";
     $timestamp = $last_check['lastrun'];
   }
@@ -500,7 +501,8 @@ function security_review_check_comments($last_check = NULL) {
   $timestamp = NULL;
   if (module_exists('comment')) {
     $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%s'" ;
-    if (!is_null($last_check)) {
+    // If the check passed before only look at comments since the last run.
+    if (!is_null($last_check) && $last_check['result'] == '1') {
       $sql .= " AND timestamp >= %d";
       $timestamp = $last_check['lastrun'];
     }
