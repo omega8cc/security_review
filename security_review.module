@@ -125,6 +125,10 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
       }
       elseif ($check['type'] == 'callback') {
         if (isset($check['file'])) {
+          // Handle Security Review defining checks for other modules.
+          if (isset($check['module'])) {
+            $module = $check['module'];
+          }
           module_load_include('inc', $module, $check['file']);
         }
         $function = $check['callback'] . '_help';
