@@ -170,7 +170,7 @@ function security_review_check_error_reporting_help($result = NULL) {
   }
   if ($result['result'] === FALSE) {
     $element['findings']['descriptions'][] = t('You have error reporting set to both the screen and the log.');
-    $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/config/error-reporting')));
+    $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/config/development/logging')));
   }
   return $element;
 }
