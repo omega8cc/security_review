@@ -70,3 +70,11 @@ function security_review_uninstall() {
   variable_del('security_review_untrusted_roles');
   variable_del('security_review_log');
 }
+
+/**
+ * Empty Security Review check result table for a fresh start on Drupal 7.
+ */
+function security_review_update_7000(&$sandbox) {
+  db_truncate('security_review')->execute();
+  return t('Security Review table truncated.');
+}

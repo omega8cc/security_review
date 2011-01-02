@@ -114,7 +114,7 @@ function security_review_check_input_formats() {
   return array('result' => $result, 'value' => $check_return_value);
 }
 
-function security_review_check_input_formats_help() {
+function security_review_check_input_formats_help($result = NULL) {
   $element['title'] = t('Allowed HTML tags in text formats');
   $element['descriptions'][] = t("Certain HTML tags can allow an attacker to take control of your site. Drupal's input format system makes use of a set filters to run on incoming text. The 'HTML Filter' strips out harmful tags and Javascript events and should be used on all formats accessible by untrusted users.");
   $element['descriptions'][] = t("<a href='!link'>Read more about Drupal's input formats in the handbooks.</a>", array('!link' => url('http://drupal.org/node/224921')));
