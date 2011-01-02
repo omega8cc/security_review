@@ -26,7 +26,7 @@ function security_review_check_file_perms() {
 
 function _security_review_check_file_perms_scan($directory, $ignore) {
   $items = array();
-  if ($handle = opendir($directory)) {
+  if (is_readable($directory) && $handle = opendir($directory)) {
     while (($file = readdir($handle)) !== FALSE) {
       // Don't check hidden files or ones we said to ignore.
       if ($file[0] != "." && !in_array($file, $ignore)) {
