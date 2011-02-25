@@ -1,4 +1,3 @@
-; $Id$
 name = Security Review
 description = "Site security and configuration review module."
 core = 7.x
