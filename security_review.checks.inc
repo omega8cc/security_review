@@ -371,7 +371,7 @@ function security_review_check_failed_logins_help($results = NULL) {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $element['findings']['descriptions'][] = t('The following IPs were observed with an abundanced of failed login attempts.');
+    $element['findings']['descriptions'][] = t('The following IPs were observed with an abundance of failed login attempts.');
     if (is_null($results)) {
       $results = security_review_check_failed_logins();
     }
@@ -544,6 +544,74 @@ function security_review_check_comments_help($results = NULL) {
         'html' => l($title, 'comment/edit/' . $cid, array('query' => $destination)),
         'safe' => check_plain($title),
         'raw' => $title . ':' . url('comment/edit/' . $cid),
+      );
+    }
+    $element['findings']['pager'] = theme('pager', NULL, 20);
+  }
+
+  return $element;
+}
+
+function security_review_check_name_passwords($last_check = NULL) {
+  $result = TRUE;
+  $check_result_value = array();
+  $timestamp = NULL;
+
+  // We check whether trusted roles have weak passwords.
+  $trusted_roles = security_review_trusted_roles();
+  if (!empty($trusted_roles)) {
+    $trusted_roles = array_keys($trusted_roles);
+    $check_result_value = _security_review_weak_passwords($trusted_roles);
+  }
+  if (!empty($check_result_value)) {
+    $result = FALSE;
+  }
+
+  return array('result' => $result, 'value' => $check_result_value);
+}
+
+function _security_review_weak_passwords($trusted_roles) {
+  $weak_users = array();
+
+  // Select users with a trusted role whose password is their username.
+  $sql = "SELECT u.uid, u.name, COUNT(rid) AS count FROM {users} u LEFT JOIN
+    {users_roles} ur ON u.uid = ur.uid AND ur.rid in (" . db_placeholders($trusted_roles) . ")
+    WHERE pass = md5(name) GROUP BY uid";
+  $results = db_query($sql, $trusted_roles); // @todo pager_query?
+  while ($row = db_fetch_object($results)) {
+    $record[] = $row;
+    if ($row->count > 0) {
+      $weak_users[$row->uid] = $row->name;
+    }
+  }
+
+  // Explicitly check uid 1 in case they have no roles.
+  $weak_uid1 = db_fetch_object(db_query("SELECT u.uid, u.name, 1 AS count FROM {users} u WHERE pass = md5(name) AND uid = 1"));
+  if (!empty($weak_uid1->count)) {
+    $weak_users[$weak_uid1->uid] = $weak_uid1->name; 
+  }
+
+  return $weak_users;
+}
+
+function security_review_check_name_passwords_help($results = NULL) {
+  $element['title'] = t('Username as password');
+  $element['descriptions'][] = t("Users with elevated access on the site (trusted users) who have a their account password the same as their username. It is recommended you enforce a password strength policy to avoid an attacker easily gaining access to your site.");
+
+  $last_check = security_review_get_last_check('security_review', 'name_passwords');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    $element['findings']['descriptions'][] = t('The following users have extremely weak passwords. The links go to the edit page.');
+    if (is_null($results)) {
+      $results = security_review_check_name_passwords(); // Don't pass $last_check because timestamp is wrong now.
+    }
+    foreach ($results['value'] as $uid => $name) {
+      $element['findings']['items'][] = array(
+        'html' => l($name, 'user/' . $uid . '/edit'),
+        'safe' => check_plain($name),
+        'raw' => $name,
       );
     }
     $element['findings']['pager'] = theme('pager', NULL, 20);

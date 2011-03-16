@@ -546,6 +546,14 @@ function security_review_security_checks() {
     'failure' => t('Untrusted roles have been granted administrative permissions.'),
     'file' => 'security_review.checks',
   );
+  $checks['name_passwords'] = array(
+    'title' => t('Username as password'),
+    'type' => 'callback',
+    'callback' => 'security_review_check_name_passwords',
+    'success' => t('Trusted accounts do not have their password set to their username.'),
+    'failure' => t('Some trusted accounts have set their password the same as their username.'),
+    'file' => 'security_review.checks',
+  );
 
   return array('security_review' => $checks);
 }
@@ -682,6 +690,19 @@ function security_review_untrusted_roles() {
   $defaults = security_review_default_untrusted_roles();
   $roles = variable_get('security_review_untrusted_roles', $defaults);
   return array_filter($roles);
+}
+
+/**
+ * Helper function for assumed trusted roles.
+ */
+function security_review_trusted_roles() {
+  $trusted_roles = array();
+  $untrusted_roles = security_review_untrusted_roles();
+  $result = db_query('SELECT rid, name FROM {role} WHERE rid NOT IN (' . db_placeholders($untrusted_roles) . ')', $untrusted_roles);
+  while ($role = db_fetch_object($result)) {
+    $trusted_roles[$role->rid] = $role->name;
+  }
+  return array_filter($trusted_roles);
 }
 
 /**
