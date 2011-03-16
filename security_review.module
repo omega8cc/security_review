@@ -518,22 +518,26 @@ function security_review_security_checks() {
     'failure' => t('Unsafe file extensions are allowed in uploads.'),
     'file' => 'security_review.checks',
   );
-  $checks['query_errors'] = array(
-    'title' => t('Database errors'),
-    'type' => 'callback',
-    'callback' => 'security_review_check_query_errors',
-    'success' => t('Few query errors from the same IP.'),
-    'failure' => t('Query errors from the same IP. These may be a SQL injection attack or an attempt at information disclosure.'),
-    'file' => 'security_review.checks',
-  );
-  $checks['failed_logins'] = array(
-    'title' => t('Failed logins'),
-    'type' => 'callback',
-    'callback' => 'security_review_check_failed_logins',
-    'success' => t('Few failed login attempts from the same IP.'),
-    'failure' => t('Failed login attempts from the same IP. These may be a brute-force attack to gain access to your site.'),
-    'file' => 'security_review.checks',
-  );
+  // Checks dependent on dblog.
+  if (module_exists('dblog')) {
+    $checks['query_errors'] = array(
+      'title' => t('Database errors'),
+      'type' => 'callback',
+      'callback' => 'security_review_check_query_errors',
+      'success' => t('Few query errors from the same IP.'),
+      'failure' => t('Query errors from the same IP. These may be a SQL injection attack or an attempt at information disclosure.'),
+      'file' => 'security_review.checks',
+    );
+
+    $checks['failed_logins'] = array(
+      'title' => t('Failed logins'),
+      'type' => 'callback',
+      'callback' => 'security_review_check_failed_logins',
+      'success' => t('Few failed login attempts from the same IP.'),
+      'failure' => t('Failed login attempts from the same IP. These may be a brute-force attack to gain access to your site.'),
+      'file' => 'security_review.checks',
+    );
+  }
   $checks['admin_permissions'] = array(
     'title' => t('Drupal admin permissions'),
     'type' => 'callback',
