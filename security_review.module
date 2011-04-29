@@ -379,6 +379,10 @@ function _security_review_run_check($module, $check_name, $check, $log) {
     switch ($check['type']) {
       case 'callback':
         if (isset($check['file'])) {
+          // Handle Security Review defining checks for other modules.
+          if (isset($check['module'])) {
+            $module = $check['module'];
+          }
           module_load_include('inc', $module, $check['file']);
         }
         $function = $check['callback'];
@@ -559,6 +563,22 @@ function security_review_security_checks() {
 }
 
 /**
+ * Implementation of hook_security_checks() on behalf of the Filefield module.
+ */
+function filefield_security_checks() {
+  $checks['filefield_extensions'] = array(
+    'title' => t('Filefield allowed uploads'),
+    'type' => 'callback',
+    'callback' => 'security_review_check_filefield_extensions',
+    'success' => t('Only safe extensions are allowed for Filefield uploaded files.'),
+    'failure' => t('Unsafe file extensions are allowed in Filefield uploads.'),
+    'file' => 'security_review.checks',
+    'module' => 'security_review',
+  );
+  return array('filefield' => $checks);
+}
+
+/**
  * Menu callback and Javascript callback for check skip toggling.
  */
 function security_review_toggle_check($check_name) {
@@ -690,6 +710,27 @@ function security_review_untrusted_roles() {
   $defaults = security_review_default_untrusted_roles();
   $roles = variable_get('security_review_untrusted_roles', $defaults);
   return array_filter($roles);
+}
+
+/**
+ * Helper function collects the permissions untrusted roles have.
+ */
+function security_review_untrusteds_permissions() {
+  static $permissions;
+  if (empty($permissions)) {
+    $permissions = array();
+    // Collect list of untrusted roles' permissions.
+    $untrusted_roles = security_review_untrusted_roles();
+    foreach ($untrusted_roles as $rid) {
+      $perms = array();
+      $results = db_fetch_array(db_query('SELECT r.rid, p.perm FROM {role} r LEFT JOIN {permission} p ON r.rid = p.rid WHERE r.rid = %d', $rid));
+      if ($results !== FALSE) {
+        $perms = explode(',', str_replace(', ', ',', $results['perm']));
+        $permissions[$rid] = $perms;
+      }
+    }
+  }
+  return $permissions;
 }
 
 /**

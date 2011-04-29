@@ -391,17 +391,15 @@ function security_review_check_failed_logins_help($results = NULL) {
 function security_review_check_admin_permissions() {
   $result = TRUE;
   $check_result_value = array();
-  $untrusted_roles = security_review_untrusted_roles();
+  // Collect the permissions untrusted roles have.
+  $untrusted = security_review_untrusteds_permissions();
+  // Admin permissions.
   $admin_perms = security_review_admin_permissions();
-  foreach ($untrusted_roles as $rid) {
-    $perms = array();
-    $results = db_fetch_array(db_query('SELECT r.rid, p.perm FROM {role} r LEFT JOIN {permission} p ON r.rid = p.rid WHERE r.rid = %d', $rid));
-    if ($results !== FALSE) {
-      $perms = explode(',', str_replace(', ', ',', $results['perm']));
-      $intersect = array_intersect($perms, $admin_perms);
-      if (!empty($intersect)) {
-        $check_result_value[$rid] = $intersect;
-      }
+  // Check for intersections.
+  foreach ($untrusted as $rid => $permissions) {
+    $intersect = array_intersect($permissions, $admin_perms);
+    if (!empty($intersect)) {
+      $check_result_value[$rid] = $intersect;
     }
   }
   if (!empty($check_result_value)) {
@@ -617,5 +615,106 @@ function security_review_check_name_passwords_help($results = NULL) {
     $element['findings']['pager'] = theme('pager', NULL, 20);
   }
 
+  return $element;
+}
+
+/**
+ * A Security Review check for allowed extensions on Filefield fields.
+ */
+function security_review_check_filefield_extensions($last_check = NULL) {
+  $result = TRUE;
+  $check_return_value = array();
+  $unsafe_extensions = security_review_unsafe_extensions();
+
+  // Collect list of untrusted roles' permissions.
+  $untrusted = security_review_untrusteds_permissions();
+  // Get Filefields and check widget file_extensions.
+  $fields = filefield_get_field_list();
+  foreach ($fields as $field) {
+    /* @TODO Add this back in when also checking upload use on content types.
+    // Initialize an empty array of roles IDs that can use this field.
+    $rids = array();
+    // Check if untrusted users can create or edit the content type that holds
+    // this field.
+    $field_type_permissions = array(
+      'create ' . $field['type_name'] . ' content',
+      'edit own ' . $field['type_name'] . ' content',
+      'edit any ' . $field['type_name'] . ' content',
+    );
+    foreach ($untrusted as $rid => $permissions) {
+      $intersect = array_intersect($permissions, $field_type_permissions);
+      if (empty($intersect)) {
+        // No intersection is good.
+        continue;
+      }
+      else {
+        $rids[] = $rid;
+      }
+    }
+    // Do not continue check if no untrusted roles can use this field.
+    if (empty($rids)) {
+      continue;
+    }*/
+
+    $extensions = $field['widget']['file_extensions'];
+    if (empty($extensions)) {
+      // No extensions set, so field allows all unsafe extensions.
+      $check_return_value[$field['field_name']]['empty'] = TRUE;
+    }
+    else {
+      // Check if specific unsafe extensions are allowed.
+      foreach ($unsafe_extensions as $unsafe_extension) {
+        if (strpos($extensions, $unsafe_extension) !== FALSE) {
+          // Found an unsafe extension.
+          $check_return_value[$field['field_name']]['extensions'][] = $unsafe_extension;
+        }
+      }
+    }
+  }
+  if (!empty($check_return_value)) {
+    $result = FALSE;
+  }
+  return array('result' => $result, 'value' => $check_return_value);
+}
+
+/**
+ * Help for the Security Review check for allowed extensions on Filefield fields.
+ */
+function security_review_check_filefield_extensions_help($results = NULL) {
+  $element['title'] = t('Filefield allowed uploads');
+  $element['descriptions'][] = t("The Filefield module allows users to attach files to content. Some extensions are considered dangerous because the files can be evaluated and then executued in the browser. A malicious user could use this opening to gain control of your site.");
+  $last_check = security_review_get_last_check('filefield', 'filefield_extensions');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    $element['findings']['descriptions'][] = t('The following Filefield fields have unsafe extensions allowed for uploaded files.');
+    if (is_null($results)) {
+      $results = security_review_check_filefield_extensions();
+    }
+    $fields = filefield_get_field_list();
+    foreach ($results['value'] as $field_name => $value) {
+      $edit_url = "admin/content/node-type/" . $fields[$field_name]['type_name'] . "/fields/$field_name";
+      if (isset($value['empty']) && $value['empty'] == TRUE) {
+        $html = t('<a href="!url">%field_name</a> has all extensions allowed and should be corrected to limit uploads to safe extensions only', array('%field_name' => $field_name, '!url' => url($edit_url)));
+        $item = t('%field_name has all extensions allowed and should be corrected to limit uploads to safe extensions only', array('%field_name' => $field_name));
+        $element['findings']['items'][] = array(
+          'html' => $html, 
+          'safe' => $item,
+          'raw' => $field_name
+        );
+      }
+      else {
+        $extensions = implode(', ', $value['extensions']);
+        $html = t('<a href="!url">%field_name</a> has the unsafe extensions: @extensions', array('%field_name' => $field_name, '@extensions' => $extensions, '!url' => url($edit_url)));
+        $item = t('%field_name has the unsafe extensions: @extensions', array('%field_name' => $field_name, '@extensions' => $extensions));
+        $element['findings']['items'][] = array(
+          'html' => $html,
+          'safe' => $item,
+          'raw' => $field_name . ' : ' . $extensions 
+        );
+      }
+    }
+  }
   return $element;
 }
