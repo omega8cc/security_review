@@ -413,7 +413,7 @@ function security_review_check_admin_permissions() {
 function security_review_check_admin_permissions_help($results = NULL) {
   $element['title'] = t('Admin permissions');
   $element['descriptions'][] = t("Drupal's permission system is extensive and allows for varying degrees of control. Certain permissions would allow a user total control, or the ability to escalate their control, over your site and should only be granted to trusted users.");
-  $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on CrackingDrupal.com.</a>', array('!link' => url('http://crackingdrupal.com/blog/ben-jeavons/importance-user-roles-and-permissions-site-security')));
+  $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on DrupalScout.com.</a>', array('!link' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security')));
   $last_check = security_review_get_last_check('security_review', 'admin_permissions');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);

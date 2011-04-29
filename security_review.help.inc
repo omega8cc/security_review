@@ -16,9 +16,9 @@ function _security_review_help() {
     Be mindful of who visits your site and what features you expose for their use.');
   $output .= '</p>';
   $output .= '<p>';
-  $output .= t('You can read more about securing your site in the <a href="!do">drupal.org handbooks</a> and on <a href="!cd">CrackingDrupal.com</a>.
+  $output .= t('You can read more about securing your site in the <a href="!do">drupal.org handbooks</a> and on <a href="!cd">DrupalScout.com</a>.
     There are also additional modules you can install to secure or protect your site. Be aware though that the more modules you have running on your site the greater (usually) attack area you expose.',
-    array('!do' => 'http://drupal.org/security/secure-configuration', '!cd' => 'http://crackingdrupal.com'));
+    array('!do' => 'http://drupal.org/security/secure-configuration', '!cd' => 'http://drupalscout.com'));
   $output .= '</p>';
   $output .= '<p>' . l(t('Drupal.org Handbook: Introduction to security-related contrib modules'), 'http://drupal.org/node/382752') . '</p>';
   /*$output .= '<h3>' . t('Contrib modules for additional security and strength') . '</h3>';

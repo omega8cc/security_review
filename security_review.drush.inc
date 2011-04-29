@@ -32,7 +32,7 @@ function security_review_drush_help($section) {
   switch ($section) {
     case 'drush:security-review':
       return dt("Run configuration security checks on your Drupal site.");
-    case 'drush:rainbow-load':
+    case 'drush:password-check-setup':
       return dt("Creates a table and fills it with dictionary words for rainbow testing.");
   }
 }
