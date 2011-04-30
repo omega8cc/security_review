@@ -772,6 +772,7 @@ function security_review_admin_permissions() {
     'administer site configuration',
     'administer filters',
     'administer content types',
+    'administer nodes',
   );
 }
 
