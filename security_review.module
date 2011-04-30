@@ -684,6 +684,8 @@ function security_review_unsafe_tags() {
     'textarea',
     'title',
     'tr',
+    'audio',
+    'video',
   );
 }
 
