@@ -718,3 +718,54 @@ function security_review_check_filefield_extensions_help($results = NULL) {
   }
   return $element;
 }
+
+function security_review_check_views_access($last_check = NULL) {
+  $result = TRUE;
+  $check_result_value = array();
+  $timestamp = NULL;
+  // Load and loop through every view, checking the access type in displays.
+  $views = views_get_all_views();
+  foreach ($views as $view) {
+    if ($view->disabled !== TRUE) {
+      // Access is set in display options of a display.
+      foreach ($view->display as $display_name => $display) {
+        if (isset($display->display_options['access']) && $display->display_options['access']['type'] == 'none') {
+          $check_result_value[$view->name][] = $display_name;
+        }
+      }
+    }
+  }
+  if (!empty($check_result_value)) {
+    $result = FALSE;
+  }
+  return array('result' => $result, 'value' => $check_result_value);
+}
+ 
+function security_review_check_views_access_help($results = NULL) {
+  $element['title'] = t('Views access');
+  $element['descriptions'][] = t("Views can check if the user is allowed access to the content. It is recommended that all Views implement some amount of access control, at a minimum checking for the permission 'access content'.");
+
+  $last_check = security_review_get_last_check('views', 'access');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    $element['findings']['descriptions'][] = t('The following View displays do not check access.');
+    if (is_null($results)) {
+      $results = security_review_check_views_access();
+    }
+    foreach ($results['value'] as $view => $displays) {
+      $url = 'admin/build/views/edit/' . $view;
+      foreach ($displays as $display) {
+        $item = $view . ': ' . $display;
+        $element['findings']['items'][] = array(
+          'html' => l($item, $url, array('fragment' => $display)),
+          'safe' => $item, // View names are safe.
+          'raw' => $item,
+        );
+      }
+    }
+  }
+
+  return $element;
+}
