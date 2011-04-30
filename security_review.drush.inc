@@ -15,10 +15,15 @@ function security_review_drush_command() {
     'callback' => 'security_review_drush',
     'aliases' => array('secrev'),
     'description' => "Run the Security Review checklist",
-    'arguments' => array(
+    'options' => array(
       'store' => 'Write results to the database',
       'log' => 'Log results of each check to watchdog, defaults to off',
       'lastrun' => 'Do not run the checklist, just print last results',
+    ),
+    'examples' => array(
+      'secrev' => 'Run the checklist and output the results',
+      'secrev --store' => 'Run the checklist, store, and output the results',
+      'secrev --lastrun' => 'Output the stored results from the last run of the checklist'
     ),
   );
   $items['password-check-setup'] = array(
