@@ -503,22 +503,14 @@ function security_review_security_checks() {
     'failure' => t('Untrusted users are allowed to input dangerous HTML tags.'),
     'file' => 'security_review.checks',
   );
-  /*$checks['nodes'] = array(
+  $checks['field'] = array(
     'title' => t('Content'),
     'type' => 'callback',
-    'callback' => 'security_review_check_nodes',
-    'success' => t('Dangerous tags were not found in the body of any nodes.'),
-    'failure' => t('Dangerous tags were found in the body of nodes.'),
+    'callback' => 'security_review_check_field',
+    'success' => t('Dangerous tags were not found in any submitted content (fields).'),
+    'failure' => t('Dangerous tags were found in submitted content (fields).'),
     'file' => 'security_review.checks',
-  );*/
-  /*$checks['comments'] = array(
-    'title' => t('Comments'),
-    'type' => 'callback',
-    'callback' => 'security_review_check_comments',
-    'success' => t('Dangerous tags were not found in any comments.'),
-    'failure' => t('Dangerous tags were found in comments.'),
-    'file' => 'security_review.checks',
-  );*/
+  );
   $checks['error_reporting'] = array(
     'title' => t('Error reporting'),
     'type' => 'callback',

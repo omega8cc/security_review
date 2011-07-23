@@ -56,15 +56,13 @@ will provide details on why the check exists and what was found on the last run.
 
 Please use the issue queue at http://drupal.org/project/security_review for all
 module support. You can read more about securely configuring your site at
-http://drupal.org/security/secure-configuration and http://crackingdrupal.org
+http://drupal.org/security/secure-configuration and http://drupalscout.com
 
-Growing Venture Solutions, the provider of this module, offers detailed,
+Drupal Scout, the provider of this module, offers detailed,
 targetted security review and support for Drupal websites and can be contacted
-on our website at http://growingventuresolutions.com or via email at 
-contact@growingventuresolutions.com
+on our website at http://drupalscout.com or via email at 
+contact@drupalscout.com
 
-You can read more about our Drupal security review service at 
-http://growingventuresolutions.com/services/security-review-service-drupal-sites
 
 -- CREDIT --
 

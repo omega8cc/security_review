@@ -381,105 +381,88 @@ function security_review_check_admin_permissions_help($results = NULL) {
   return $element;
 }
 
-function security_review_check_nodes($last_check = NULL) {
-  // @todo move to checking fields?
-  $result = TRUE;
-  $check_result_value = array();
+function security_review_check_field($last_check = NULL) {
+  $check_result = TRUE;
+  $check_result_value = $tables = $found = array();
   $timestamp = NULL;
-  /*$sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%<script%' OR r.body LIKE '%<?php%'";
-  $query = db_select('node', 'n')->fields('n', 'nid')
-    ->join('node_revision', 'r', 'n.vid = r.vid')
-    ->condition();*/
-  if (!is_null($last_check)) {
-    $sql .= " AND n.changed >= %d";
-    $timestamp = $last_check['lastrun'];
+  $instances = field_info_instances();
+  // Loop through instances checking for fields of type text.
+  foreach ($instances as $entity_type => $type_bundles) {
+    foreach ($type_bundles as $bundle => $bundle_instances) {
+      foreach ($bundle_instances as $field_name => $instance) {
+        $field = field_info_field($field_name);
+        // Check into text fields that are stored in SQL.
+        if ($field['module'] == 'text' && $field['storage']['module'] == 'field_sql_storage') {
+          // Build array of tables and columns to search.
+          $current_table = key($field['storage']['details']['sql'][FIELD_LOAD_CURRENT]);
+          $revision_table = key($field['storage']['details']['sql'][FIELD_LOAD_REVISION]);
+          if (!array_key_exists($current_table, $tables)) {
+            $tables[$current_table] = $field['storage']['details']['sql'][FIELD_LOAD_CURRENT][$current_table]['value'];
+          }
+          if (!array_key_exists($revision_table, $tables)) {
+            $tables[$revision_table] = $field['storage']['details']['sql'][FIELD_LOAD_REVISION][$revision_table]['value'];
+          }
+        }
+      }
+    }
   }
-  $results = pager_query($sql, 50, 0, NULL, $timestamp);
-  while ($row = db_fetch_array($results)) {
-    $check_result_value[] = $row['nid'];
+  if (empty($tables)) {
+    return array('result' => $check_result, 'value' => $check_result_value);
   }
-  if (!empty($check_result_value)) {
-    $result = FALSE;
+  // Search for PHP or Javascript tags in text columns.
+  foreach ($tables as $table => $column) {
+    $sql = "SELECT DISTINCT entity_id, entity_type FROM {" . $table . "} WHERE " . $column . " LIKE :text";
+    // Handle changed? @todo
+    foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $description => $comparison) {
+      $results = db_query($sql, array(':text' => $comparison)); // @pager query?
+      foreach ($results as $result) {
+        $check_result = FALSE;
+        if (!isset($check_result_value[$result->entity_type]) || !array_key_exists($result->entity_id, $check_result_value[$result->entity_type])) {
+          $check_result_value[$result->entity_type][$result->entity_id] = $description;
+        }
+      }
+    }
   }
 
-  return array('result' => $result, 'value' => $check_result_value);
+  return array('result' => $check_result, 'value' => $check_result_value);
 }
 
-function security_review_check_nodes_help($results = NULL) {
-  $element['title'] = t('Dangerous tags in nodes');
-  $element['descriptions'][] = t("Script and PHP code in the body of nodes does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such content from the body of nodes.");
+function security_review_check_field_help($results = NULL) {
+  $element['title'] = t('Dangerous tags in content');
+  $element['descriptions'][] = t("Script and PHP code in content does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such contents.");
 
-  $last_check = security_review_get_last_check('security_review', 'nodes');
+  $last_check = security_review_get_last_check('security_review', 'field');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
   elseif ($last_check['result'] == '0') {
-    $element['findings']['descriptions'][] = t('The following nodes potentially have dangerous tags. The links go to the edit page.');
+    $element['findings']['descriptions'][] = t('The following items potentially have dangerous tags.  ');
     if (is_null($results)) {
-      $results = security_review_check_nodes(); // Don't pass $last_check because timestamp is wrong now.
+      $results = security_review_check_field(); // Don't pass $last_check because timestamp is wrong now.
     }
-    foreach ($results['value'] as $nid) {
+    foreach ($results['value'] as $entity_type => $value) {
+      $ids = array_keys($value);
+      $entity_info = entity_get_info($entity_type);
+      $id = $entity_info['entity keys']['id'];
+      $label = $entity_info['entity keys']['label'];
+      $uri_callback = $entity_info['uri callback'];
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
-      $node = node_load($nid);
-      $html = t('@description found in <a href="!link">@title</a>', array('@description' => $description, '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
-      $url = url('node/' . $node->nid . '/edit');
-      $element['findings']['items'][] = array(
-        'html' => $html, 
-        'safe' => t('@description in !url', array('@description' => $description, '!url' => $url)),
-        'raw' => $description . ':' . $url,
-      );
+      $entities = entity_load($entity_type, $ids);
+      foreach ($entities as $entity) {
+        $uri = '#';
+        if (function_exists($uri_callback)) {
+          $uri = $uri_callback($entity);
+          $uri = url($uri['path'] . '/edit'); // @todo can this assumption be made?
+        }
+        $html = t('@description found in <a href="!link">@title</a>', array('@description' => $value[$entity->{$id}], '!link' => $uri, '@title' => $entity->{$label}));
+        $element['findings']['items'][] = array(
+          'html' => $html, 
+          'safe' => t('@description in !url', array('@description' => $value[$entity->{$id}], '!url' => $uri)),
+          'raw' => $value[$entity->{$id}] . ':' . $uri,
+        );
+      }
     }
-    $element['findings']['pager'] = theme('pager', array('tags' => NULL));
-  }
-
-  return $element;
-}
-
-function security_review_check_comments($last_check = NULL) {
-  $result = TRUE;
-  $check_result_value = array();
-  $timestamp = NULL;
-  if (module_exists('comment')) {
-    $sql = "SELECT nid, cid FROM {comments} WHERE comment LIKE '%<script%' OR comment LIKE '%<?php%'";
-    if (!is_null($last_check)) {
-      $sql .= " AND timestamp >= %d";
-      $timestamp = $last_check['lastrun'];
-    }
-    $results = pager_query($sql, 20, 0, NULL, $timestamp);
-    while ($row = db_fetch_array($results)) {
-      $check_result_value[$row['cid']] = $row['nid'];
-    }
-    if (!empty($check_result_value)) {
-      $result = FALSE;
-    }
-  }
-  else {
-    return NULL;
-  }
-  return array('result' => $result, 'value' => $check_result_value);
-}
-
-function security_review_check_comments_help($results = NULL) {
-  $element['title'] = t('Dangerous tags in comments');
-  $element['descriptions'][] = t("There is little reason for script and PHP tags to be in comments (unless they are code examples) and could be in use maliciously.");
-
-  $last_check = security_review_get_last_check('security_review', 'comments');
-  if ($last_check['skip'] == '1') {
-    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
-  }
-  elseif ($last_check['result'] == '0') {
-    $element['findings']['descriptions'][] = t('The following comments have dangerous tags. The links go to the edit page.');
-    if (is_null($results)) {
-      $results = security_review_check_comments(); // Don't pass $last_check because timestamp is wrong now.
-    }
-    foreach ($results['value'] as $cid => $nid) {
-      $comment = comment_load($cid);
-      // There is no access checking. We state that the use of this module should be granted to trusted users only.
-      $node = node_load($nid);
-      $title = t('!subject on !title', array('!subject' => $comment->subject, '!title' => $node->title));
-      $element['findings']['items'][] = l($title, 'comment/edit/' . $cid);
-    }
-    $element['findings']['pager'] = theme('pager', array('tags' => NULL));
+    //$element['findings']['pager'] = theme('pager', array('tags' => NULL));
   }
 
   return $element;
