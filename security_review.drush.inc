@@ -15,6 +15,16 @@ function security_review_drush_command() {
     'callback' => 'security_review_drush',
     'aliases' => array('secrev'),
     'description' => "Run the Security Review checklist",
+    'options' => array(
+      'store' => 'Write results to the database',
+      'log' => 'Log results of each check to watchdog, defaults to off',
+      'lastrun' => 'Do not run the checklist, just print last results',
+    ),
+    'examples' => array(
+      'secrev' => 'Run the checklist and output the results',
+      'secrev --store' => 'Run the checklist, store, and output the results',
+      'secrev --lastrun' => 'Output the stored results from the last run of the checklist'
+    ),
   );
   $items['password-check-setup'] = array(
     'callback' => 'security_review_drush_hash_setup',
@@ -43,30 +53,50 @@ function security_review_drush_help($section) {
 function security_review_drush() {
   // Retrieve the checklist.
   $checklist = module_invoke_all('security_checks');
-  
-  $args = func_get_args();
-  if (!empty($args) && $args[0] == 'run') {
+
+  $store = drush_get_option('store');
+  $log = drush_get_option('log');
+  $lastrun = drush_get_option('lastrun');
+  if (!$lastrun) {
     // Run the checklist.
-    $result = security_review_run($checklist);
-  }
-  else {
-    // Retrieve results from last run of the checklist.
-    $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
-    foreach ($result as $record) {
-      $checks[] = $record;
+    $checklist_results = _security_review_run($checklist, $log ? TRUE : NULL);
+    if ($store) {
+      security_review_store_results($checklist_results);
     }
-    
-    $rows = array();
-    foreach ($checks as $check) {
-      if ($check->result) {
-        $message = $checklist[$check->namespace][$check->reviewcheck]['success'];
-        $status = 'success';
+    // Print results.
+    foreach ($checklist_results as $module => $checks) {
+      foreach ($checks as $check_name => $check) {
+        if ($check['result']) {
+          $message = $check['title'];
+          $status = 'success';
+        }
+        else {
+          $message = $check['title'];
+          $status = 'error';
+        }
+        drush_log($message, $status);
       }
-      else {
-        $message = $checklist[$check->namespace][$check->reviewcheck]['failure'];
-        $status = 'error';
+    }
+  }
+  elseif ($lastrun) {
+    // Retrieve results from last run of the checklist.
+    $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
+    foreach ($results as $result) {
+      $checks[] = $result;
+    }
+    // Print results.
+    if (!empty($checks)) {
+      foreach ($checks as $check) {
+        if ($check['result']) {
+          $message = $checklist[$check['namespace']][$check['reviewcheck']]['success'];
+          $status = 'success';
+        }
+        else {
+          $message = $checklist[$check['namespace']][$check['reviewcheck']]['failure'];
+          $status = 'error';
+        }
+        drush_log($message, $status);
       }
-      drush_log($message, $status);
     }
   }
 }

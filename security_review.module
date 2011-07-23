@@ -31,7 +31,7 @@ function security_review_menu() {
   $items = array();
   $items['admin/reports/security-review'] = array(
     'title' => 'Security review',
-    'description' => 'Perform and review the security of your site.',
+    'description' => 'Perform a review or the security of your site.',
     'page callback' => 'security_review_page',
     'access arguments' => array('access security review list'),
     'type' => MENU_NORMAL_ITEM,
@@ -137,6 +137,10 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
       }
       elseif ($check['type'] == 'callback') {
         if (isset($check['file'])) {
+          // Handle Security Review defining checks for other modules.
+          if (isset($check['module'])) {
+            $module = $check['module'];
+          }
           module_load_include('inc', $module, $check['file']);
         }
         $function = $check['callback'] . '_help';
@@ -316,6 +320,35 @@ function security_review_run_store($checklist, $log = NULL) {
 }
 
 /**
+ * Store checklist results.
+ */
+function security_review_store_results($results) {
+  $saved = $to_save = 0;
+  foreach ($results as $module => $checks) {
+    foreach ($checks as $check_name => $check) {
+      $to_save++;
+      $record = array(
+        'namespace' => $module,
+        'reviewcheck' => $check_name,
+        'result' => $check['result'],
+        'lastrun' => $check['lastrun'] ? $check['lastrun'] : REQUEST_TIME,
+      );
+      $num_deleted = db_delete('security_review')
+        ->condition('namespace', $module)
+        ->condition('reviewcheck', $check_name)
+        ->execute();
+      if (drupal_write_record('security_review', $record) == SAVED_NEW) {
+        $saved++;
+      }
+      else {
+        watchdog('security_review', 'Unable to store check !reviewcheck for !namespace', array('!reviewcheck' => $check_name, '!namespace' => $module), WATCHDOG_ERROR );
+      }
+    }
+  }
+  return ($to_save == $saved) ? TRUE : FALSE;
+}
+
+/**
  * Run the security review checklist and return the full results.
  */
 function security_review_run_full($checklist, $log = NULL) {
@@ -358,72 +391,6 @@ function _security_review_run($checklist, $log) {
 }
 
 /**
- * Run the security review checklist.
- */
-/*function security_review_run($checklist) {
-  $results = array();
-  foreach ($checklist as $module => $checks) {
-    foreach ($checks as $check_name => $arguments) {
-      // Get the results of the last check.
-      $last_check = security_review_get_last_check($module, $check_name);
-      $return = NULL;
-      // Run the check if we haven't before or we are not skipping it.
-      if (is_null($last_check) || !$last_check['skip']) {
-        switch ($arguments['type']) {
-          case 'callback':
-            if (isset($arguments['file'])) {
-              module_load_include('inc', $module, $arguments['file']);
-            }
-            $function = $arguments['callback'];
-            if (function_exists($function)) {
-              $return = call_user_func($function, $last_check);
-              if (is_null($return)) {
-                continue; // Check was n/a, so skip.
-              }
-            }
-            break;
-        }
-        if ($return) {
-          $check_result = array_merge($arguments, $return);
-          $check_result['lastrun'] = REQUEST_TIME;
-          // To log, or not to log?
-          $log = variable_get('security_review_log', TRUE);
-          if ($log) {
-            $variables = array('!name' => $check_result['title']);
-            if ($check_result['result']) {
-              _security_review_log($module, $check_name, '!name check passed', $variables, WATCHDOG_INFO);
-            }
-            else {
-              _security_review_log($module, $check_name, '!name check failed', $variables, WATCHDOG_ERROR);
-            }
-          }
-          $results[$module][$check_name] = $check_result;
-        }
-        elseif ($last_check) {
-          // NA on recent check but we have an old check so delete it.
-          $num_deleted = db_delete('security_review')
-            ->condition('namespace', $module)
-            ->condition('reviewcheck', $check_name)
-            ->execute();
-          $check_result = $arguments;
-          // To log, or not to log?
-          $log = variable_get('security_review_log', TRUE);
-          if ($log) {
-            $message = '!name no longer applicable for checking';
-            _security_review_log($module, $check_name, $message, array('!name' => $check_result['title']), WATCHDOG_INFO);
-          }
-        }
-      }
-    }
-  }
-  if (!empty($results)) {
-    // Store all results in our present table.
-    $storage_result = security_review_store_results($results);
-  }
-  return $storage_result;
-}*/
-
-/**
  * Run a single Security Review check.
  */
 function _security_review_run_check($module, $check_name, $check, $log) {
@@ -435,6 +402,10 @@ function _security_review_run_check($module, $check_name, $check, $log) {
     switch ($check['type']) {
       case 'callback':
         if (isset($check['file'])) {
+          // Handle Security Review defining checks for other modules.
+          if (isset($check['module'])) {
+            $module = $check['module'];
+          }
           module_load_include('inc', $module, $check['file']);
         }
         $function = $check['callback'];
@@ -510,32 +481,6 @@ function _sec_review_batch_finished($success, $results, $operations) {
 
 function _security_review_log($module, $check_name, $message, $variables, $type) {
   watchdog('security_review', $message, $variables, $type);
-}
-
-function security_review_store_results($results) {
-  $saved = $to_save = 0;
-  foreach ($results as $module => $checks) {
-    foreach ($checks as $check_name => $check) {
-      $to_save++;
-      $record = array(
-        'namespace' => $module,
-        'reviewcheck' => $check_name,
-        'result' => $check['result'],
-        'lastrun' => $check['lastrun'] ? $check['lastrun'] : REQUEST_TIME,
-      );
-      $num_deleted = db_delete('security_review')
-        ->condition('namespace', $module)
-        ->condition('reviewcheck', $check_name)
-        ->execute();
-      if (drupal_write_record('security_review', $record) == SAVED_NEW) {
-        $saved++;
-      }
-      else {
-        watchdog('security_review', 'Unable to store check !reviewcheck for !namespace', array('!reviewcheck' => $check_name, '!namespace' => $module), WATCHDOG_ERROR );
-      }
-    }
-  }
-  return ($to_save == $saved) ? TRUE : FALSE;
 }
 
 /**
@@ -618,6 +563,14 @@ function security_review_security_checks() {
     'failure' => t('Untrusted roles have been granted administrative permissions.'),
     'file' => 'security_review.checks',
   );
+  /*$checks['name_passwords'] = array(
+    'title' => t('Username as password'),
+    'type' => 'callback',
+    'callback' => 'security_review_check_name_passwords',
+    'success' => t('Trusted accounts do not have their password set to their username.'),
+    'failure' => t('Some trusted accounts have set their password the same as their username.'),
+    'file' => 'security_review.checks',
+  );*/
 
   return array('security_review' => $checks);
 }
@@ -777,6 +730,41 @@ function security_review_admin_permissions() {
     'administer filters',
     'administer content types',
   );
+}
+
+/**
+ * Helper function collects the permissions untrusted roles have.
+ */
+function security_review_untrusted_permissions() {
+  static $permissions;
+  if (empty($permissions)) {
+    $permissions = array();
+    // Collect list of untrusted roles' permissions.
+    $untrusted_roles = security_review_untrusted_roles();
+    foreach ($untrusted_roles as $rid) {
+      $perms = array();
+      $results = db_query('SELECT r.rid, p.permission FROM {role} r LEFT JOIN {role_permission} p ON r.rid = p.rid WHERE r.rid = :rid', array(':rid' => $rid))
+        ->fetchArray();
+      if ($results !== FALSE) {
+        $perms = explode(',', str_replace(', ', ',', $results['permission']));
+        $permissions[$rid] = $perms;
+      }
+    }
+  }
+  return $permissions;
+}
+
+/**
+ * Helper function for assumed trusted roles.
+ */
+function security_review_trusted_roles() {
+  $trusted_roles = array();
+  $untrusted_roles = security_review_untrusted_roles();
+  $results = db_query('SELECT rid, name FROM {role} WHERE rid NOT IN (:rids)', array(':rids' => $untrusted_roles));
+  foreach ($results as $role) {
+    $trusted_roles[$role->rid] = $role->name;
+  }
+  return array_filter($trusted_roles);
 }
 
 /**
