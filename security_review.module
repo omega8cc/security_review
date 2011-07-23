@@ -547,6 +547,14 @@ function security_review_security_checks() {
       'file' => 'security_review.checks',
     );
   }
+  $checks['upload_extensions'] = array(
+    'title' => t('Allowed upload extensions'),
+    'type' => 'callback',
+    'callback' => 'security_review_check_upload_extensions',
+    'success' => t('Only safe extensions are allowed for uploaded files and images.'),
+    'failure' => t('Unsafe file extensions are allowed in uploads.'),
+    'file' => 'security_review.checks',
+  );
   $checks['admin_permissions'] = array(
     'title' => t('Drupal admin permissions'),
     'type' => 'callback',

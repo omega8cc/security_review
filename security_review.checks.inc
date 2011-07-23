@@ -468,6 +468,58 @@ function security_review_check_field_help($results = NULL) {
   return $element;
 }
 
+function security_review_check_upload_extensions($last_check = NULL) {
+  $check_result = TRUE;
+  $check_result_value = array();
+  $instances = field_info_instances();
+  $unsafe_extensions = security_review_unsafe_extensions();
+  // Loop through instances checking for fields of file.
+  foreach ($instances as $entity_type => $type_bundles) {
+    foreach ($type_bundles as $bundle => $bundle_instances) {
+      foreach ($bundle_instances as $field_name => $instance) {
+        $field = field_info_field($field_name);
+        if ($field['module'] == 'image' || $field['module'] == 'file') {
+          // Check instance file_extensions.
+          foreach ($unsafe_extensions as $unsafe_extension) {
+            if (strpos($instance['settings']['file_extensions'], $unsafe_extension) !== FALSE) {
+              // Found an unsafe extension.
+              $check_result_value[$instance['field_name']][] = $unsafe_extension;
+              $check_result = FALSE;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return array('result' => $check_result, 'value' => $check_result_value);
+}
+
+function security_review_check_upload_extensions_help($results = NULL) {
+  $element['title'] = t('Allowed upload extensions');
+  $element['descriptions'][] = t("File and image fields allow for uploaded files. Some extensions are considered dangerous because the files can be evaluated and then executued in the browser. A malicious user could use this opening to gain control of your site.");
+  $last_check = security_review_get_last_check('security_review', 'upload_extensions');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif (TRUE || $last_check['result'] == '0') {
+    if (is_null($results)) {
+      $result = security_review_check_upload_extensions();
+    }
+
+    $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
+    foreach ($result['value'] as $field_name => $extensions) {
+      foreach ($extensions as $extension) {
+        $element['findings']['items'][] = array(
+          'raw' => $extension,
+          'safe' => check_plain($extension),
+        );
+      }
+    }
+  }
+  return $element;
+}
+
 function security_review_check_name_passwords($last_check = NULL) {
   $result = TRUE;
   $check_result_value = array();
