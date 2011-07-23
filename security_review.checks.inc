@@ -77,7 +77,7 @@ function security_review_check_input_formats() {
   $result = TRUE;
   global $user;
   $formats = filter_formats($user);
-  $check_return_value = array();
+  $check_result_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
   $untrusted_roles = array_keys($untrusted_roles);
@@ -96,21 +96,21 @@ function security_review_check_input_formats() {
         foreach ($unsafe_tags as $tag) {
           if (strpos($allowed_tags, '<' . $tag . '>') !== FALSE) {
             // Found an unsafe tag
-            $check_return_value['tags'][$id] = $tag;
+            $check_result_value['tags'][$id] = $tag;
           }
         }
       }
       elseif (!in_array('filter_html_escape', array_keys($filters)) || !$filters['filter_html_escape']->status) {
         // Format is usable by untrusted users but does not contain the HTML Filter or the HTML escape.
-        $check_return_value['formats'][$id] = $format;
+        $check_result_value['formats'][$id] = $format;
       }
     }
   }
 
-  if (!empty($check_return_value)) {
+  if (!empty($check_result_value)) {
     $result = FALSE;
   }
-  return array('result' => $result, 'value' => $check_return_value);
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 function security_review_check_input_formats_help($result = NULL) {
