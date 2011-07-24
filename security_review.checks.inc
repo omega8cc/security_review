@@ -770,33 +770,30 @@ function security_review_check_views_access_help($results = NULL) {
   return $element;
 }
 
-
-
 function security_review_check_email_passwords($last_check = NULL) {
   $result = TRUE;
-  
+
   drupal_load('module', 'user');
-  $mail_tempaltes = array('register_no_approval_required_subject', 'register_no_approval_required_body', 'register_admin_created_subject', 'register_admin_created_body', 'register_pending_approval_subject', 'register_pending_approval_admin_subject', 'register_pending_approval_body', 'register_pending_approval_admin_body', 'password_reset_subject', 'password_reset_body', 'status_activated_subject', 'status_activated_body', 'status_blocked_subject', 'status_blocked_body', 'status_deleted_subject', 'status_deleted_body');
-  
-  $check_return_value = array();
-  foreach ($mail_tempaltes as $template_name) {
+  $mail_templates = array('register_no_approval_required_subject', 'register_no_approval_required_body', 'register_admin_created_subject', 'register_admin_created_body', 'register_pending_approval_subject', 'register_pending_approval_admin_subject', 'register_pending_approval_body', 'register_pending_approval_admin_body', 'password_reset_subject', 'password_reset_body', 'status_activated_subject', 'status_activated_body', 'status_blocked_subject', 'status_blocked_body', 'status_deleted_subject', 'status_deleted_body');
+
+  $check_result_value = array();
+  foreach ($mail_templates as $template_name) {
     $text = _user_mail_text($template_name);
     if (strpos($text, '!password') !== FALSE) {
-      $check_return_value[] = $template_name;
+      $check_result_value[] = $template_name;
     }
   }
-    
-  if (!empty($check_return_value)) {
+
+  if (!empty($check_result_value)) {
     $result = FALSE;
   }
-  return array('result' => $result, 'value' => $check_return_value);
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 function security_review_check_email_passwords_help($results = NULL) {
   $element['title'] = t('Password included in user emails');
-  $element['descriptions'][] = t("Passwords should never be sent in plaintext in emails. Drupal offers a '!password' token that can be included in email templates, but this should not be used.");
-  
-  
+  $element['descriptions'][] = t("Drupal offers a '!password' token that can be included in email templates, but it should not be used because it can be stolen.");
+
   $last_check = security_review_get_last_check('security_review', 'password_in_emails');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -805,16 +802,16 @@ function security_review_check_email_passwords_help($results = NULL) {
     if (is_null($results)) {
       $results = security_review_check_email_passwords();
     }
-    
+
     if (empty($results['value'])) {
-      $element['findings']['descriptions'][] = t('No user email templates include the !password token.');      
+      $element['findings']['descriptions'][] = t('No user email templates include the !password token.');
     }
     else {
-      $element['findings']['descriptions'][] = t('The following email templates include the !password token. Visit the !user_settings page to modify these templates', array('!user_settings' => l('User Settings', 'admin/user/settings')));
-      
+      $element['findings']['descriptions'][] = t('The following email templates include the !password token. Visit the !user_settings page to modify these templates.', array('!user_settings' => l('User Settings', 'admin/user/settings')));
+      // It'd be best to print non-machine names for these templates.
       foreach ($results['value'] as $template_name) {
         $element['findings']['items'][] = array(
-          'safe' => check_plain($template_name),
+          'safe' => $template_name,
           'raw' => $template_name,
         );
       }

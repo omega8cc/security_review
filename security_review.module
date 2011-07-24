@@ -562,8 +562,8 @@ function security_review_security_checks() {
     'title' => t('Password included in user emails'),
     'type' => 'callback',
     'callback' => 'security_review_check_email_passwords',
-    'success' => t('User passwords are not being included in user emails.'),
-    'failure' => t('User passwords are being sent in emails in plain text.'),
+    'success' => t('User passwords are not included in emails.'),
+    'failure' => t('User passwords are included in emails.'),
     'file' => 'security_review.checks',
   );
 
