@@ -76,7 +76,7 @@ function security_review_check_file_perms_help($result = NULL) {
 function security_review_check_input_formats() {
   $result = TRUE;
   $formats = filter_formats();
-  $check_return_value = array();
+  $check_result_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
   // The default format is usable by all users even if no roles are listed on it.
@@ -104,22 +104,22 @@ function security_review_check_input_formats() {
           foreach ($unsafe_tags as $tag) {
             if (strpos($allowed_tags, '<' . $tag . '>') !== FALSE) {
               // Found an unsafe tag
-              $check_return_value['tags'][$id] = $tag;
+              $check_result_value['tags'][$id] = $tag;
             }
           }
         }
       }
       else {
         // Format is usable by untrusted users but does not contain the HTML Filter.
-        $check_return_value['formats'][$id] = $format->name;
+        $check_result_value['formats'][$id] = $format->name;
       }
     }
   }
 
-  if (!empty($check_return_value)) {
+  if (!empty($check_result_value)) {
     $result = FALSE;
   }
-  return array('result' => $result, 'value' => $check_return_value);
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 function security_review_check_input_formats_help($result = NULL) {
@@ -230,7 +230,7 @@ function security_review_check_private_files_help($result = NULL) {
  */
 function security_review_check_upload_extensions() {
   $result = TRUE;
-  $check_return_value = array();
+  $check_result_value = array();
   if (module_exists('upload')) {
     // First, check if any unsafe extensions are even allowed.
     $extensions = variable_get('upload_extensions_default', NULL);
@@ -239,18 +239,18 @@ function security_review_check_upload_extensions() {
       foreach ($unsafe_extensions as $unsafe_extension) {
         if (strpos($extensions, $unsafe_extension) !== FALSE) {
           // Found an unsafe extension.
-          $check_return_value[] = $unsafe_extension;
+          $check_result_value[] = $unsafe_extension;
         }
       }
     }
-    if (!empty($check_return_value)) {
+    if (!empty($check_result_value)) {
       $result = FALSE;
     }
   }
   else {
     return NULL;
   }
-  return array('result' => $result, 'value' => $check_return_value);
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 function security_review_check_upload_extensions_help($result = NULL) {
@@ -623,7 +623,7 @@ function security_review_check_name_passwords_help($results = NULL) {
  */
 function security_review_check_filefield_extensions($last_check = NULL) {
   $result = TRUE;
-  $check_return_value = array();
+  $check_result_value = array();
   $unsafe_extensions = security_review_unsafe_extensions();
 
   // Collect list of untrusted roles' permissions.
@@ -659,22 +659,22 @@ function security_review_check_filefield_extensions($last_check = NULL) {
     $extensions = $field['widget']['file_extensions'];
     if (empty($extensions)) {
       // No extensions set, so field allows all unsafe extensions.
-      $check_return_value[$field['field_name']]['empty'] = TRUE;
+      $check_result_value[$field['field_name']]['empty'] = TRUE;
     }
     else {
       // Check if specific unsafe extensions are allowed.
       foreach ($unsafe_extensions as $unsafe_extension) {
         if (strpos($extensions, $unsafe_extension) !== FALSE) {
           // Found an unsafe extension.
-          $check_return_value[$field['field_name']]['extensions'][] = $unsafe_extension;
+          $check_result_value[$field['field_name']]['extensions'][] = $unsafe_extension;
         }
       }
     }
   }
-  if (!empty($check_return_value)) {
+  if (!empty($check_result_value)) {
     $result = FALSE;
   }
-  return array('result' => $result, 'value' => $check_return_value);
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 /**
