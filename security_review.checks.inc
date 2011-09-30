@@ -17,7 +17,26 @@ function security_review_check_file_perms() {
   // Set files to ignore.
   $ignore = array('..', 'CVS', $file_path);
   $files = _security_review_check_file_perms_scan('.', $ignore);
-  if (count($files)) {
+
+  // Try creating or appending files.
+  // Assume it doesn't work.
+  $create_status = $append_status = FALSE;
+
+  $directory = drupal_get_path('module', 'security_review');
+  // Write a file with the timestamp
+  $file = './' . $directory . '/file_write_test.' . date('Ymdhis');
+  if ($file_create = fopen($file, 'w')) {
+    $create_status = fwrite($file_create, t("This is a vulnerable directory.\n"));
+    fclose($file_create);
+  }
+  // Try to append to our IGNOREME file.
+  $file = './'. $directory . '/IGNOREME.txt';
+  if ($file_append = fopen($file, 'a')) {
+    $append_status = fwrite($file_append, date('Ymdhis') . "\n");
+    fclose($file_append);
+  }
+
+  if (count($files) || $create_status || $append_status) {
     $result = FALSE;
   }
   return array('result' => $result, 'value' => $files);
@@ -32,11 +51,11 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
         $file = $directory . "/" . $file;
         if (is_dir($file)) {
           $items = array_merge($items, _security_review_check_file_perms_scan($file, $ignore));
-          if (is_writable( $file)) {
+          if (is_writable($file)) {
             $items[] = preg_replace("/\/\//si", "/", $file);
           }
         }
-        elseif (is_writable( $file)) {
+        elseif (is_writable($file)) {
           $items[] = preg_replace("/\/\//si", "/", $file);
         }
       }
@@ -49,6 +68,7 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
 function security_review_check_file_perms_help($result = NULL) {
   $element['title'] =  t("Web server file system permissions");
   $element['descriptions'][] = t("It is dangerous to allow the web server to write to files inside the document root of your server. Doing so would allow Drupal to write files that could then be executed. An attacker might use such a vulnerability to take control of your site. An exception is the files directory which Drupal needs permission to write to in order to provide features like file attachments.");
+  $element['descriptions'][] = t("In addition to inspecting files, this test attempts to create and write to files. Look in your security_review module directory on the server for files named file_write_test.YYYYMMDDHHMMSS and for a file called IGNOREME.txt which gets a timestamp appended to it if it is writeable.</p>");
   $element['descriptions'][] = t("<a href='!link'>Read more about file system permissions in the handbooks.</a>", array('!link' => url('http://drupal.org/node/244924')));
 
   $last_check = security_review_get_last_check('security_review', 'file_perms');
@@ -481,7 +501,7 @@ function security_review_check_nodes_help($results = NULL) {
       $html = t('@description found in <a href="!link">@title</a>', array('@description' => $description, '!link' => url('node/' . $node->nid . '/edit', array('query' => $destination)), '@title' => $node->title));
       $url = url('node/' . $node->nid . '/edit');
       $element['findings']['items'][] = array(
-        'html' => $html, 
+        'html' => $html,
         'safe' => t('@description in !url', array('@description' => $description, '!url' => $url)),
         'raw' => $description . ':' . $url,
       );
