@@ -714,7 +714,7 @@ function security_review_check_filefield_extensions_help($results = NULL) {
     }
     $fields = filefield_get_field_list();
     foreach ($results['value'] as $field_name => $value) {
-      $edit_url = "admin/content/node-type/" . $fields[$field_name]['type_name'] . "/fields/$field_name";
+      $edit_url = "admin/content/node-type/" . str_replace('_', '-', $fields[$field_name]['type_name']) . "/fields/$field_name";
       if (isset($value['empty']) && $value['empty'] == TRUE) {
         $html = t('<a href="!url">%field_name</a> has all extensions allowed and should be corrected to limit uploads to safe extensions only', array('%field_name' => $field_name, '!url' => url($edit_url)));
         $item = t('%field_name has all extensions allowed and should be corrected to limit uploads to safe extensions only', array('%field_name' => $field_name));
