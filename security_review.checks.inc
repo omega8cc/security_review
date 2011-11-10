@@ -95,7 +95,6 @@ function security_review_check_file_perms_help($result = NULL) {
  */
 function security_review_check_input_formats() {
   $result = TRUE;
-  global $user;
   $formats = filter_formats();
   $check_result_value = array();
   // Check formats that are accessible by untrusted users.
@@ -157,6 +156,55 @@ function security_review_check_input_formats_help($result = NULL) {
     }
     elseif (!empty($result['value']['formats'])) {
       $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and do not filter or escape allowed HTML tags.');
+      foreach ($result['value']['formats'] as $id => $format) {
+        $element['findings']['items'][] = array(
+          'html' => l($format->name, 'admin/config/content/formats/' . $format->format),
+          'safe' => check_plain($format->name),
+          'raw' => $format->name,
+        );
+      }
+    }
+  }
+  return $element;
+}
+
+function security_review_check_php_filter() {
+  $result = TRUE;
+  $formats = filter_formats();
+  $check_result_value = array();
+  // Check formats that are accessible by untrusted users.
+  $untrusted_roles = security_review_untrusted_roles();
+  $untrusted_roles = array_keys($untrusted_roles);
+  foreach ($formats as $id => $format) {
+    $format_roles = filter_get_roles_by_format($format);
+    $intersect = array_intersect(array_keys($format_roles), $untrusted_roles);
+    if (!empty($intersect)) {
+      // Untrusted users can use this format.
+      $filters = filter_list_format($format->format);
+      // Check format for enabled PHP filter.
+      if (in_array('php_code', array_keys($filters)) && $filters['php_code']->status) {
+        $result = FALSE;
+        $check_result_value['formats'][$id] = $format;
+      }
+    }
+  }
+
+  return array('result' => $result, 'value' => $check_result_value);
+}
+
+function security_review_check_php_filter_help($result = NULL) {
+  $element['title'] = t('PHP Input Format');
+  $element['descriptions'][] = t("Drupal's PHP Text Format allows for the interpretation and execution of PHP code via user-supplied input. Because this input runs in the context of Drupal itself it has access to everything Drupal does.");
+  $last_check = security_review_get_last_check('security_review', 'untrusted_php');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    if (is_null($result)) {
+      $result = security_review_check_php_filter();
+    }
+    if (!empty($result['value']['formats'])) {
+      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and allow use of the PHP evaluator. You should edit the format to remove PHP use.');
       foreach ($result['value']['formats'] as $id => $format) {
         $element['findings']['items'][] = array(
           'html' => l($format->name, 'admin/config/content/formats/' . $format->format),
