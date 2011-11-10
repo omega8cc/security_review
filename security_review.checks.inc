@@ -178,6 +178,63 @@ function security_review_check_input_formats_help($result = NULL) {
   return $element;
 }
 
+function security_review_check_php_filter() {
+  $result = TRUE;
+  $formats = filter_formats();
+  $check_result_value = array();
+  // Check formats that are accessible by untrusted users.
+  $untrusted_roles = security_review_untrusted_roles();
+  // The default format is usable by all users even if no roles are listed on it.
+  $default_format = variable_get('filter_default_format', FILTER_FORMAT_DEFAULT);
+  // Loop through each format and look for the PHP filter.
+  foreach ($formats as $id => $format) {
+    $format_roles = array_filter(explode(',', $format->roles));
+    if ($format->format == $default_format) {
+      // The default format is available to all roles.
+      $intersect = drupal_map_assoc(array_keys(user_roles()));
+    }
+    else {
+      $intersect = array_intersect($format_roles, $untrusted_roles);
+    }
+    if (!empty($intersect)) {
+      // Untrusted users can use this format.
+      $filters = filter_list_format($format->format);
+      // Check format for PHP filter.
+      if (in_array('php/0', array_keys($filters))) {
+        $result = FALSE;
+        $check_result_value['formats'][$id] = $format->name;
+      }
+    }
+  }
+
+  return array('result' => $result, 'value' => $check_result_value);
+}
+
+function security_review_check_php_filter_help($result = NULL) {
+  $element['title'] = t('PHP Input Format');
+  $element['descriptions'][] = t("Drupal's PHP Input Format allows for the interpretation and execution of PHP code via user-supplied input. Because this input runs in the context of Drupal itself it has access to everything Drupal does.");
+  $last_check = security_review_get_last_check('security_review', 'untrusted_php');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    if (is_null($result)) {
+      $result = security_review_check_php_filter();
+    }
+    if (!empty($result['value']['formats'])) {
+      $element['findings']['descriptions'][] = t('The following formats are usable by untrusted roles and allow use of the PHP evaluator. The default filter will have all roles checked. You should edit the format to remove PHP use.');
+      foreach ($result['value']['formats'] as $id => $name) {
+        $element['findings']['items'][] = array(
+          'html' => l($name, 'admin/settings/filters/' . $id),
+          'safe' => check_plain($name),
+          'raw' => $name,
+        );
+      }
+    }
+  }
+  return $element;
+}
+
 function security_review_check_error_reporting() {
   $error_level = variable_get('error_level', NULL);
   if (is_null($error_level) || intval($error_level) == 1) {

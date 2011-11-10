@@ -566,6 +566,17 @@ function security_review_security_checks() {
     'failure' => t('User passwords are included in emails.'),
     'file' => 'security_review.checks',
   );
+  // Check dependent on PHP filter being enabled.
+  if (module_exists('php')) {
+    $checks['untrusted_php'] = array(
+      'title' => t('PHP access'),
+      'type' => 'callback',
+      'callback' => 'security_review_check_php_filter',
+      'success' => t('Untrusted users do not have access to use the PHP input format.'),
+      'failure' => t('Untrusted users have access to use the PHP input format.'),
+      'file' => 'security_review.checks',
+    );
+  }
 
   return array('security_review' => $checks);
 }
