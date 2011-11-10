@@ -96,7 +96,7 @@ function security_review_check_file_perms_help($result = NULL) {
 function security_review_check_input_formats() {
   $result = TRUE;
   global $user;
-  $formats = filter_formats($user);
+  $formats = filter_formats();
   $check_result_value = array();
   // Check formats that are accessible by untrusted users.
   $untrusted_roles = security_review_untrusted_roles();
