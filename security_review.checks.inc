@@ -46,8 +46,8 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
   $items = array();
   if (is_readable($directory) && $handle = opendir($directory)) {
     while (($file = readdir($handle)) !== FALSE) {
-      // Don't check hidden files or ones we said to ignore.
-      if ($file[0] != "." && !in_array($file, $ignore)) {
+      // Don't check hidden files or ones we said to ignore, or subdir site links.
+      if ($file[0] != "." && !in_array($file, $ignore) && !(is_link($file) && readlink($file) == '.')) {
         $file = $directory . "/" . $file;
         if (is_dir($file)) {
           $items = array_merge($items, _security_review_check_file_perms_scan($file, $ignore));
