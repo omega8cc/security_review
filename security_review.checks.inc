@@ -404,14 +404,17 @@ function security_review_check_admin_permissions() {
   $result = TRUE;
   $check_result_value = array();
   $untrusted_roles = security_review_untrusted_roles();
-  $admin_perms = security_review_admin_permissions();
+  // Collect permissions marked as for trusted users only.
+  $all_permissions = module_invoke_all('permission');
+  $all_keys = array_keys($all_permissions);
   // Get permissions for untrusted roles.
-  $role_permissions = user_role_permissions($untrusted_roles);
-  foreach ($role_permissions as $rid => $permissions) {
-    $permissions = array_keys($permissions);
-    $intersect = array_intersect($admin_perms, $permissions);
-    if (!empty($intersect)) {
-      $check_result_value[$rid] = $intersect;
+  $untrusted_permissions = user_role_permissions($untrusted_roles);
+  foreach ($untrusted_permissions as $rid => $permissions) {
+    $intersect = array_intersect($all_keys, array_keys($permissions));
+    foreach ($intersect as $permission) {
+      if (isset($all_permissions[$permission]['restrict access'])) {
+        $check_result_value[$rid][] = $permission;
+      }
     }
   }
 
@@ -422,7 +425,7 @@ function security_review_check_admin_permissions() {
 }
 
 function security_review_check_admin_permissions_help($results = NULL) {
-  $element['title'] = t('Admin permissions');
+  $element['title'] = t('Admin and trusted Drupal permissions');
   $element['descriptions'][] = t("Drupal's permission system is extensive and allows for varying degrees of control. Certain permissions would allow a user total control, or the ability to escalate their control, over your site and should only be granted to trusted users.");
   $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on DrupalScout.com.</a>', array('!link' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security')));
   $last_check = security_review_get_last_check('security_review', 'admin_permissions');
@@ -434,7 +437,7 @@ function security_review_check_admin_permissions_help($results = NULL) {
       $results = security_review_check_admin_permissions();
     }
     $roles = user_roles();
-    $element['findings']['descriptions'][] = t('You have granted untrusted roles the following administrative permissions that you should revoke.');
+    $element['findings']['descriptions'][] = t('You have granted untrusted roles the following permissions that you should revoke.');
     foreach ($results['value'] as $rid => $permissions) {
       $permissions = implode(', ', $permissions);
       $html = t('<a href="!link">@name</a> has %permissions', array('!link' => url('admin/people/permissions/' . $rid), '@name' => $roles[$rid], '%permissions' => $permissions));

@@ -556,11 +556,11 @@ function security_review_security_checks() {
     'file' => 'security_review.checks',
   );
   $checks['admin_permissions'] = array(
-    'title' => t('Drupal admin permissions'),
+    'title' => t('Drupal permissions'),
     'type' => 'callback',
     'callback' => 'security_review_check_admin_permissions',
-    'success' => t('Untrusted roles do not have administrative permissions.'),
-    'failure' => t('Untrusted roles have been granted administrative permissions.'),
+    'success' => t('Untrusted roles do not have administrative or trusted Drupal permissions.'),
+    'failure' => t('Untrusted roles have been granted administrative or trusted Drupal permissions.'),
     'file' => 'security_review.checks',
   );
   /*$checks['name_passwords'] = array(
@@ -728,19 +728,6 @@ function security_review_untrusted_roles() {
   $roles = variable_get('security_review_untrusted_roles', $defaults);
   // array_filter() to remove roles with 0 (meaning they are trusted) @todo
   return array_filter($roles);
-}
-
-/**
- * Helper function defines super-admin Drupal permissions.
- */
-function security_review_admin_permissions() {
-  return array(
-    'administer users',
-    'administer permissions',
-    'administer site configuration',
-    'administer filters',
-    'administer content types',
-  );
 }
 
 /**
