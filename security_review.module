@@ -101,6 +101,16 @@ function security_review_page() {
 }
 
 /**
+ * Implementation of hook_security_checks().
+ */
+function security_review_security_checks() {
+  module_load_include('inc', 'security_review');
+  // security_review_get_checks() will include implementations of this hook
+  // that Security Review defines on behalf of other modules.
+  return security_review_get_checks();
+}
+
+/**
  * Retrive the result from the last run of a security check.
  */
 function security_review_get_last_check($namespace, $check_name) {
@@ -305,7 +315,7 @@ function security_review_run_store($checklist, $log = NULL) {
   if (is_null($log)) {
     $log = variable_get('security_review_log', TRUE);
   }
-  // Call private function to perform the actual review.
+  // Perform the actual review.
   $results = _security_review_run($checklist, $log);
   // Store results and return.
   return security_review_store_results($results);
@@ -357,7 +367,7 @@ function _security_review_batch_op($module, $check_name, $check, $log, &$context
   module_load_include('inc', 'security_review');
   $context['message'] = $check['title'];
   // Run the check.
-  $check_result = _security_review_run_check($module, $check_name, $check, $log);
+  $check_result = _security_review_run_check($module, $check_name, $check, $log, TRUE);
   if (!empty($check_result)) {
     $context['results'][$module][$check_name] = $check_result;
   }
@@ -538,12 +548,11 @@ function _security_review_settings_submit($form, &$form_state) {
   $log = $form_state['values']['security_review_log'];
   // Set checked.
   $checklist = module_invoke_all('security_checks');
+  $skipped = security_review_skipped_checks();
   foreach ($checklist as $module => $checks) {
     foreach ($checks as $check_name => $check) {
-      $sql = "SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review} WHERE namespace = '%s' AND reviewcheck = '%s'";
-      $record = db_fetch_object(db_query($sql, $module, $check_name));
       // Toggle the skip.
-      if (isset($record->skip) && $record->skip && $form_state['values']['security_review_skip'][$check_name] == 0) {
+      if (!empty($skipped) && array_key_exists($check_name, $skipped[$module]) && $form_state['values']['security_review_skip'][$check_name] == 0) {
         // We were skipping, so stop skipping and clear skip identifiers.
         $record->skip = FALSE;
         $record->skiptime = 0;

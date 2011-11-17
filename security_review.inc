@@ -5,32 +5,25 @@
  * Stand-alone security checks and review system.
  */
 
+// Define the version of this file in case it's used outside of its module.
+define('SECURITY_REVIEW_VERSION', '1.2');
+
 /**
  * Public function for running Security Review checklist and returning results.
  *
- * @param array $skip Array of checks to skip, indexed by module namespace.
+ * @param array $checklist Array of checks to run, indexed by module namespace.
  * @param boolean $log Whether to log check processing using security_review_log.
  * @param boolean $help Whether to load the help file and include in results.
- * @return array Results from runnings checklist, indexed by module namespace.
+ * @return array Results from running checklist, indexed by module namespace.
  */
-function security_review_run($skip = array(), $log = FALSE, $help = FALSE) {
-  $checklist = module_invoke_all('security_checks');
-  // Unset checks to skip.
-  if (!empty($skip)) {
-    foreach ($skip as $module => $checks) {
-      foreach ($checks as $check_name => $check) {
-        unset($checklist[$module][$check_name]);
-      }
-      if (empty($checklist[$module])) {
-        unset($checklist[$module]);
-      }
-    }
+function security_review_run($checklist = NULL, $log = FALSE, $help = FALSE) {
+  if (!$checklist && module_exists('security_review')) {
+    $checklist = module_invoke_all('security_review');
   }
-
   $results = _security_review_run($checklist, $log);
 
   // Fill out the descriptions of the results if $help is requested.
-  if ($help && module_load_include('inc', 'security_review', 'security_review.help')) {
+  if ($help && module_exists('security_review') && module_load_include('inc', 'security_review', 'security_review.help')) {
     foreach ($results as $module => $checks) {
       foreach ($checks as $check_name => $check) {
         $function = $check['callback'] . '_help';
@@ -48,7 +41,7 @@ function security_review_run($skip = array(), $log = FALSE, $help = FALSE) {
 }
 
 /**
- * Private function performs the review and returns the full results.
+ * Private function the review and returns the full results.
  */
 function _security_review_run($checklist, $log = FALSE) {
   $results = array();
@@ -66,9 +59,12 @@ function _security_review_run($checklist, $log = FALSE) {
 /**
  * Run a single Security Review check.
  */
-function _security_review_run_check($module, $check_name, $check, $log) {
-  // Get the results of the last check.
-  $last_check = security_review_get_last_check($module, $check_name);
+function _security_review_run_check($module, $check_name, $check, $log, $store = FALSE) {
+  $last_check = array();
+  if ($store) {
+    // Get the results of the last check.
+    $last_check = security_review_get_last_check($module, $check_name);
+  }
   $check_result = array();
   $return = array('result' => NULL);
   if (isset($check['file'])) {
@@ -98,9 +94,9 @@ function _security_review_run_check($module, $check_name, $check, $log) {
 }
 
 /**
- * Implementation of hook_security_checks().
+ * Checks for security_review_security_checks() or security_review_get_checks().
  */
-function security_review_security_checks() {
+function _security_review_security_checks() {
   $checks['file_perms'] = array(
     'title' => t('File system permissions'),
     'callback' => 'security_review_check_file_perms',
@@ -191,32 +187,32 @@ function security_review_security_checks() {
 }
 
 /**
- * Implementation of hook_security_checks() on behalf of the Filefield module.
+ * Checks for security_review_get_checks() when Filefield is enabled.
  */
-function filefield_security_checks() {
+function _filefield_security_checks() {
   $checks['filefield_extensions'] = array(
     'title' => t('Filefield allowed uploads'),
     'callback' => 'security_review_check_filefield_extensions',
     'success' => t('Only safe extensions are allowed for Filefield uploaded files.'),
     'failure' => t('Unsafe file extensions are allowed in Filefield uploads.'),
     'module' => 'security_review',
-    // Because the callback is in this file specify it here.
+    // Specify this file because the callback is here.
     'file' => 'security_review',
   );
   return array('filefield' => $checks);
 }
 
 /**
- * Implementation of hook_security_checks() on behalf of the Views module.
+ * Checks for security_review_get_checks() when Views is enabled.
  */
-function views_security_checks() {
+function _views_security_checks() {
   $checks['access'] = array(
     'title' => t('Views access'),
     'callback' => 'security_review_check_views_access',
     'success' => t('Views are access controlled.'),
     'failure' => t('There are Views that do not provide any access checks.'),
     'module' => 'security_review',
-    // Because the callback is in this file specify it here.
+    // Specify this file because the callback is here.
     'file' => 'security_review',
   );
   return array('views' => $checks);
@@ -860,6 +856,22 @@ function security_review_role_permission($rid, $permission) {
     $return = TRUE;
   }
   return $return;
+}
+
+/**
+ * Helper function allows for collection of this file's security checks.
+ */
+function security_review_get_checks() {
+  $checks = _security_review_security_checks();
+  if (module_exists('filefield')) {
+    $filefield = _filefield_security_checks();
+    $checks = array_merge($checks, $filefield);
+  }
+  if (module_exists('views')) {
+    $views = _filefield_security_checks();
+    $checks = array_merge($checks, $views);
+  }
+  return $checks;
 }
 
 /**

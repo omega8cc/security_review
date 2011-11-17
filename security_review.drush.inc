@@ -51,15 +51,15 @@ function security_review_drush_help($section) {
  * Run checklist and display results command.
  */
 function security_review_drush() {
-  // Retrieve the checklist.
   module_load_include('inc', 'security_review');
 
   $store = drush_get_option('store');
   $log = drush_get_option('log');
   $lastrun = drush_get_option('lastrun');
   if (!$lastrun) {
+    $checklist = module_invoke_all('security_checks');
     // Run the checklist.
-    $checklist_results = security_review_run(array(), $log);
+    $checklist_results = security_review_run($checklist, $log);
     if ($store) {
       security_review_store_results($checklist_results);
     }
