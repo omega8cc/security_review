@@ -6,7 +6,7 @@
  */
 
 // Define the version of this file in case it's used outside of its module.
-define('SECURITY_REVIEW_VERSION', '1.2');
+define('SECURITY_REVIEW_VERSION', '6.x-1.2');
 
 /**
  * Public function for running Security Review checklist and returning results.
@@ -863,12 +863,12 @@ function security_review_role_permission($rid, $permission) {
  */
 function security_review_get_checks() {
   $checks = _security_review_security_checks();
-  if (module_exists('filefield')) {
+  if (module_exists('filefield') && function_exists('filefield_get_field_list')) {
     $filefield = _filefield_security_checks();
     $checks = array_merge($checks, $filefield);
   }
-  if (module_exists('views')) {
-    $views = _filefield_security_checks();
+  if (module_exists('views') && function_exists('views_get_all_views')) {
+    $views = _views_security_checks();
     $checks = array_merge($checks, $views);
   }
   return $checks;
