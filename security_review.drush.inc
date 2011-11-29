@@ -56,11 +56,25 @@ function security_review_drush() {
   $store = drush_get_option('store');
   $log = drush_get_option('log');
   $lastrun = drush_get_option('lastrun');
+  $checklist = module_invoke_all('security_checks');
   if (!$lastrun) {
-    $checklist = module_invoke_all('security_checks');
     // Unset file_perms of security_review because drush is running as a
     // different user.
     unset($checklist['security_review']['file_perms']);
+    if ($store) {
+      // Remove checks that are being skipped.
+      $skipped = security_review_skipped_checks();
+      if (!empty($skipped)) {
+        foreach ($skipped as $module => $checks) {
+          foreach ($checks as $check_name => $check) {
+            unset($checklist[$module][$check_name]);
+          }
+          if (empty($checklist[$module])) {
+            unset($checklist[$module]);
+          }
+        }
+      }
+    }
     // Run the checklist.
     $checklist_results = security_review_run($checklist, $log);
     if ($store) {
@@ -95,11 +109,11 @@ function security_review_drush() {
     if (!empty($checks)) {
       foreach ($checks as $check) {
         if ($check['result']) {
-          $message = $checklist[$check['namespace']][$check['reviewcheck']]['success'];
+          $message = $checklist[$check['namespace']][$check['reviewcheck']]['title'];
           $status = 'success';
         }
         else {
-          $message = $checklist[$check['namespace']][$check['reviewcheck']]['failure'];
+          $message = $checklist[$check['namespace']][$check['reviewcheck']]['title'];
           $status = 'error';
         }
         drush_log($message, $status);
@@ -111,7 +125,8 @@ function security_review_drush() {
 function security_review_drush_hash_setup() {
   $args = func_get_args();
   if (empty($args)) {
-    drush_die('Filename required');
+    drush_set_error('SECURITY_REVIEW_ERROR', dt('Dictionary filename required'));
+    return FALSE;
   }
   if (file_exists($args[0])) {
     $ret = array();
