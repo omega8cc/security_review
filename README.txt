@@ -58,10 +58,12 @@ Please use the issue queue at http://drupal.org/project/security_review for all
 module support. You can read more about securely configuring your site at
 http://drupal.org/security/secure-configuration and http://drupalscout.com
 
-Drupal Scout, the provider of this module, offers detailed,
+Acquia, the provider of this module, offers detailed,
 targetted security review and support for Drupal websites and can be contacted
-on our website at http://drupalscout.com or via email at 
-contact@drupalscout.com
+at http://wwww.acquia.com or via email at sales@acquia.com.
+
+You can read more about our Drupal security review service at 
+http://www.acquia.com/products-services/acquia-professional-services/service-offerings
 
 
 -- CREDIT --
