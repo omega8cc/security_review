@@ -193,13 +193,13 @@ function security_review_check_file_perms() {
   $directory = drupal_get_path('module', 'security_review');
   // Write a file with the timestamp
   $file = './' . $directory . '/file_write_test.' . date('Ymdhis');
-  if ($file_create = fopen($file, 'w')) {
+  if ($file_create = @fopen($file, 'w')) {
     $create_status = fwrite($file_create, t("This is a vulnerable directory.\n"));
     fclose($file_create);
   }
   // Try to append to our IGNOREME file.
   $file = './'. $directory . '/IGNOREME.txt';
-  if ($file_append = fopen($file, 'a')) {
+  if ($file_append = @fopen($file, 'a')) {
     $append_status = fwrite($file_append, date('Ymdhis') . "\n");
     fclose($file_append);
   }
