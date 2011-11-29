@@ -762,7 +762,6 @@ function security_review_unsafe_tags() {
  */
 function security_review_unsafe_extensions() {
   return array(
-    'flv',
     'swf',
     'exe',
     'html',
