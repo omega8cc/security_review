@@ -59,22 +59,26 @@ function security_review_drush() {
   $lastrun = drush_get_option('lastrun');
   if (!$lastrun) {
     // Run the checklist.
-    $checklist_results = _security_review_run($checklist, $log ? TRUE : NULL);
+    $checklist_results = security_review_run($checklist, $log ? TRUE : NULL);
     if ($store) {
       security_review_store_results($checklist_results);
     }
     // Print results.
     foreach ($checklist_results as $module => $checks) {
       foreach ($checks as $check_name => $check) {
-        if ($check['result']) {
+        if (is_null($check['result'])) {
+          // Do nothing if result is NULL.
+        }
+        elseif ($check['result']) {
           $message = $check['title'];
           $status = 'success';
+          drush_log($message, $status);
         }
         else {
           $message = $check['title'];
           $status = 'error';
+          drush_log($message, $status);
         }
-        drush_log($message, $status);
       }
     }
   }
