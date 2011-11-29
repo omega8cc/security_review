@@ -58,6 +58,9 @@ function security_review_drush() {
   $lastrun = drush_get_option('lastrun');
   if (!$lastrun) {
     $checklist = module_invoke_all('security_checks');
+    // Unset file_perms of security_review because drush is running as a
+    // different user.
+    unset($checklist['security_review']['file_perms']);
     // Run the checklist.
     $checklist_results = security_review_run($checklist, $log);
     if ($store) {
