@@ -545,12 +545,22 @@ function _security_review_settings_submit($form, &$form_state) {
   $log = $form_state['values']['security_review_log'];
   // Set checked.
   $checklist = module_invoke_all('security_checks');
-  $skipped = security_review_skipped_checks();
+
+  $stored = array();
+  $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
+  while ($record = db_fetch_array($results)) {
+    $stored[$record['namespace']][$record['reviewcheck']] = $record;
+  }
+
   foreach ($checklist as $module => $checks) {
     foreach ($checks as $check_name => $check) {
+      $record = new stdClass();
+      $update = array();
       // Toggle the skip.
-      if (!empty($skipped) && array_key_exists($check_name, $skipped[$module]) && $form_state['values']['security_review_skip'][$check_name] == 0) {
+      if (isset($stored[$module][$check_name]) && $stored[$module][$check_name]['skip'] == 1 && $form_state['values']['security_review_skip'][$check_name] === 0) {
         // We were skipping, so stop skipping and clear skip identifiers.
+        $record->namespace = $module;
+        $record->reviewcheck = $check_name;
         $record->skip = FALSE;
         $record->skiptime = 0;
         $record->skipuid = NULL;
@@ -563,11 +573,7 @@ function _security_review_settings_submit($form, &$form_state) {
       }
       elseif ($form_state['values']['security_review_skip'][$check_name] !== 0) {
         // Start skipping and record who made the decision and when.
-        if (empty($record)) {
-          $record = new stdClass();
-          $update = NULL;
-        }
-        else {
+        if (isset($stored[$module][$check_name])) {
           $update = array('namespace', 'reviewcheck');
         }
         $record->namespace = $module;

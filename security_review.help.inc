@@ -463,10 +463,15 @@ function security_review_check_email_passwords_help($results = NULL) {
 function security_review_check_error_reporting_help($result = NULL) {
   $element['title'] = t('Error reporting');
   $element['descriptions'][] = t('As a form of hardening your site you should avoid information disclosure. Drupal by default prints errors to the screen and writes them to the log. Error messages disclose the full path to the file where the error occured.');
-  if (is_null($result)) {
-    $result = security_review_check_error_reporting();
+  
+  $last_check = security_review_get_last_check('security_review', 'error_reporting');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
   }
-  if ($result['result'] === FALSE) {
+  elseif ($last_check['result'] == '0') {
+    if (is_null($result)) {
+      $result = security_review_check_error_reporting();
+    }
     $element['findings']['descriptions'][] = t('You have error reporting set to both the screen and the log.');
     $element['findings']['descriptions'][] = t('<a href="!link">Alter error reporting settings.</a>', array('!link' => url('admin/settings/error-reporting')));
   }
