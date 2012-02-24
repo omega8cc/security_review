@@ -122,30 +122,26 @@ function security_review_get_last_check($namespace, $check_name) {
  */
 function security_review_check_help($module = NULL, $check_name = NULL) {
   // Include checks and help files.
-  module_load_include('inc', 'security_review');
+  $checklist = module_invoke_all('security_checks');
   module_load_include('inc', 'security_review', 'security_review.help');
   $output = '';
   if (!is_null($module) && !is_null($check_name)) {
-    $function = $module . '_security_checks'; // Call the hook implementation.
-    if (function_exists($function)) {
-      $checklist = $function();
-      $check = $checklist[$module][$check_name];
-      if (isset($check['help'])) {
-        $output = $check['help'];
+    $check = $checklist[$module][$check_name];
+    if (isset($check['help'])) {
+      $output = $check['help'];
+    }
+    elseif (isset($check['callback'])) {
+      if (isset($check['file'])) {
+        // Handle Security Review defining checks for other modules.
+        if (isset($check['module'])) {
+          $module = $check['module'];
+        }
+        module_load_include('inc', $module, $check['file']);
       }
-      elseif (isset($check['callback'])) {
-        if (isset($check['file'])) {
-          // Handle Security Review defining checks for other modules.
-          if (isset($check['module'])) {
-            $module = $check['module'];
-          }
-          module_load_include('inc', $module, $check['file']);
-        }
-        $function = $check['callback'] . '_help';
-        if (function_exists($function)) {
-          $element = $function();
-          $output = theme('security_review_check_help', $element);
-        }
+      $function = $check['callback'] . '_help';
+      if (function_exists($function)) {
+        $element = $function();
+        $output = theme('security_review_check_help', $element);
       }
     }
   }
