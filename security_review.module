@@ -103,9 +103,7 @@ function security_review_page() {
  * Implementation of hook_security_checks().
  */
 function security_review_security_checks() {
-  if (!function_exists('security_review_run')) {
-    module_load_include('inc', 'security_review');
-  }
+  module_load_include('inc', 'security_review');
   // security_review_get_checks() will include implementations of this hook
   // that Security Review defines on behalf of other modules.
   return security_review_get_checks();
@@ -360,9 +358,7 @@ function security_review_store_results($results) {
  * Operation function called by Batch.
  */
 function _security_review_batch_op($module, $check_name, $check, $log, &$context) {
-  if (!function_exists('security_review_run')) {
-    module_load_include('inc', 'security_review');
-  }
+  module_load_include('inc', 'security_review');
   $context['message'] = $check['title'];
   // Run the check.
   $check_result = _security_review_run_check($module, $check_name, $check, $log, TRUE);
@@ -375,9 +371,7 @@ function _security_review_batch_op($module, $check_name, $check, $log, &$context
  * Finished callback for Batch processing the checklist.
  */
 function _security_review_batch_finished($success, $results, $operations) {
-  if (!function_exists('security_review_run')) {
-    module_load_include('inc', 'security_review');
-  }
+  module_load_include('inc', 'security_review');
   if ($success) {
     if (!empty($results)) {
       // Store results in our present table.
@@ -406,9 +400,7 @@ function security_review_security_review_log($module, $check_name, $message, $va
  */
 function security_review_toggle_check($check_name) {
   global $user;
-  if (!function_exists('security_review_run')) {
-    module_load_include('inc', 'security_review');
-  }
+  module_load_include('inc', 'security_review');
 
   if (!drupal_valid_token($_GET['token'], $check_name)) {
     return drupal_access_denied();

@@ -18,7 +18,7 @@ define('SECURITY_REVIEW_VERSION', '6.x-1.2');
  */
 function security_review_run($checklist = NULL, $log = FALSE, $help = FALSE) {
   if (!$checklist && module_exists('security_review')) {
-    $checklist = module_invoke_all('security_review');
+    $checklist = module_invoke_all('security_checks');
   }
   $results = _security_review_run($checklist, $log);
 
@@ -41,7 +41,7 @@ function security_review_run($checklist = NULL, $log = FALSE, $help = FALSE) {
 }
 
 /**
- * Private function the review and returns the full results.
+ * Private function run review and returns the full results.
  */
 function _security_review_run($checklist, $log = FALSE) {
   $results = array();
