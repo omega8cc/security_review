@@ -175,6 +175,22 @@ function _security_review_security_checks() {
 }
 
 /**
+ * Checks for security_review_get_checks() when Views is enabled.
+ */
+function views_security_checks() {
+  $checks['access'] = array(
+    'title' => t('Views access'),
+    'callback' => 'security_review_check_views_access',
+    'success' => t('Views are access controlled.'),
+    'failure' => t('There are Views that do not provide any access checks.'),
+    'module' => 'security_review',
+    // Specify this file because the callback is here.
+    'file' => 'security_review',
+  );
+  return array('views' => $checks);
+}
+
+/**
  * Check that files aren't writeable by the server.
  */
 function security_review_check_file_perms() {
@@ -555,7 +571,33 @@ function _security_review_weak_passwords($trusted_roles) {
  */
 function security_review_get_checks() {
   $checks = _security_review_security_checks();
+  if (module_exists('views') && function_exists('views_get_all_views')) {
+    $views = views_security_checks();
+    $checks = array_merge($checks, $views);
+  }
   return $checks;
+}
+
+function security_review_check_views_access($last_check = NULL) {
+  $result = TRUE;
+  $check_result_value = array();
+  $timestamp = NULL;
+  // Load and loop through every view, checking the access type in displays.
+  $views = views_get_all_views();
+  foreach ($views as $view) {
+    if ($view->disabled !== TRUE) {
+      // Access is set in display options of a display.
+      foreach ($view->display as $display_name => $display) {
+        if (isset($display->display_options['access']) && $display->display_options['access']['type'] == 'none') {
+          $check_result_value[$view->name][] = $display_name;
+        }
+      }
+    }
+  }
+  if (!empty($check_result_value)) {
+    $result = FALSE;
+  }
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 /**

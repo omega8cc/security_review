@@ -330,6 +330,35 @@ function security_review_check_upload_extensions_help($results = NULL) {
   return $element;
 }
 
+function security_review_check_views_access_help($results = NULL) {
+  $element['title'] = t('Views access');
+  $element['descriptions'][] = t("Views can check if the user is allowed access to the content. It is recommended that all Views implement some amount of access control, at a minimum checking for the permission 'access content'.");
+
+  $last_check = security_review_get_last_check('views', 'access');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    $element['findings']['descriptions'][] = t('The following View displays do not check access.');
+    if (is_null($results)) {
+      $results = security_review_check_views_access();
+    }
+    foreach ($results['value'] as $view => $displays) {
+      $url = 'admin/structure/views/view/' . $view . '/edit/';
+      foreach ($displays as $display) {
+        $item = $view . ': ' . $display;
+        $element['findings']['items'][] = array(
+          'html' => l($item, $url . $display),
+          'safe' => $item, // View names are safe.
+          'raw' => $item,
+        );
+      }
+    }
+  }
+
+  return $element;
+}
+
 function security_review_check_name_passwords_help($results = NULL) {
   $element['title'] = t('Username as password');
   $element['descriptions'][] = t("Users with elevated access on the site (trusted users) who have a their account password the same as their username. It is recommended you enforce a password strength policy to avoid an attacker easily gaining access to your site.");
