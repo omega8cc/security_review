@@ -18,7 +18,7 @@ define('SECURITY_REVIEW_VERSION', '7.x-1.0');
  */
 function security_review_run($checklist = NULL, $log = FALSE, $help = FALSE) {
   if (!$checklist && module_exists('security_review')) {
-    $checklist = module_invoke_all('security_review');
+    $checklist = module_invoke_all('security_checks');
   }
   $results = _security_review_run($checklist, $log);
 
