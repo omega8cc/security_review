@@ -224,8 +224,7 @@ function _views_security_checks() {
 function security_review_check_file_perms() {
   $result = TRUE;
   // Extract ending folder for file directory path.
-  $file_path = rtrim(file_directory_path(), '/');
-  $file_path = substr($file_path, strrpos($file_path, '/') + 1);
+  $file_path = './' . rtrim(file_directory_path(), '/');
   // Set files to ignore.
   $ignore = array('..', 'CVS', $file_path);
   $files = _security_review_check_file_perms_scan('.', $ignore);
@@ -261,13 +260,13 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
       // Don't check hidden files or ones we said to ignore, or subdir site links.
       if ($file[0] != "." && !in_array($file, $ignore) && !(is_link($file) && readlink($file) == '.')) {
         $file = $directory . "/" . $file;
-        if (is_dir($file)) {
+        if (is_dir($file) && !in_array($file, $ignore)) {
           $items = array_merge($items, _security_review_check_file_perms_scan($file, $ignore));
           if (is_writable($file)) {
             $items[] = preg_replace("/\/\//si", "/", $file);
           }
         }
-        elseif (is_writable($file)) {
+        elseif (is_writable($file) && !in_array($file, $ignore)) {
           $items[] = preg_replace("/\/\//si", "/", $file);
         }
       }
