@@ -510,7 +510,7 @@ function security_review_check_upload_extensions($last_check = NULL) {
           foreach ($unsafe_extensions as $unsafe_extension) {
             if (strpos($instance['settings']['file_extensions'], $unsafe_extension) !== FALSE) {
               // Found an unsafe extension.
-              $check_result_value[$instance['field_name']][] = $unsafe_extension;
+              $check_result_value[$instance['field_name']][$instance['bundle']] = $unsafe_extension;
               $check_result = FALSE;
             }
           }

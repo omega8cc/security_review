@@ -266,7 +266,7 @@ function security_review_check_admin_permissions_help($results = NULL) {
 
 function security_review_check_field_help($results = NULL) {
   $element['title'] = t('Dangerous tags in content');
-  $element['descriptions'][] = t("Script and PHP code in content does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such contents.");
+  $element['descriptions'][] = t('Script and PHP code in content does not align with Drupal best practices and may be a vulnerability if an untrusted user is allowed to edit such content. It is recommended you remove such contents.');
 
   $last_check = security_review_get_last_check('security_review', 'field');
   if ($last_check['skip'] == '1') {
@@ -307,7 +307,7 @@ function security_review_check_field_help($results = NULL) {
 
 function security_review_check_upload_extensions_help($results = NULL) {
   $element['title'] = t('Allowed upload extensions');
-  $element['descriptions'][] = t("File and image fields allow for uploaded files. Some extensions are considered dangerous because the files can be evaluated and then executued in the browser. A malicious user could use this opening to gain control of your site.");
+  $element['descriptions'][] = t('File and image fields allow for uploaded files. Some extensions are considered dangerous because the files can be evaluated and then executued in the browser. A malicious user could use this opening to gain control of your site. Review <a href="@fields_report">all fields on your site</a>.', array('@fields_report' => url('admin/reports/fields')));
   $last_check = security_review_get_last_check('security_review', 'upload_extensions');
   if ($last_check['skip'] == '1') {
     $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
@@ -316,13 +316,13 @@ function security_review_check_upload_extensions_help($results = NULL) {
     if (is_null($results)) {
       $result = security_review_check_upload_extensions();
     }
-
     $element['findings']['descriptions'][] = t('The following extensions are considered unsafe and should be removed or limited from use. Or, be sure you are not granting untrusted users the ability to upload files.');
     foreach ($result['value'] as $field_name => $extensions) {
-      foreach ($extensions as $extension) {
+      foreach ($extensions as $bundle => $extension) {
         $element['findings']['items'][] = array(
           'raw' => $extension,
           'safe' => check_plain($extension),
+          'html' => l(t('Review @type in @name field on @bundle', array('@type' => $extension, '@name' => $field_name, '@bundle' => $bundle)), 'admin/structure/types/manage/' . $bundle . '/fields/' . $field_name),
         );
       }
     }
