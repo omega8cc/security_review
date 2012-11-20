@@ -31,7 +31,7 @@ function security_review_menu() {
   $items = array();
   $items['admin/reports/security-review'] = array(
     'title' => 'Security review',
-    'description' => 'Perform a review or the security of your site.',
+    'description' => 'Perform a review of the security of your site.',
     'page callback' => 'security_review_page',
     'access arguments' => array('access security review list'),
     'type' => MENU_NORMAL_ITEM,
