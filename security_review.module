@@ -484,13 +484,13 @@ function security_review_settings() {
   $message = '';
   $defaults = security_review_default_untrusted_roles();
   if (in_array(DRUPAL_AUTHENTICATED_RID, $defaults)) {
-    $message = 'You have allowed anonymous users to create accounts without approval, the authenticated role thus defaults to untrusted.';
+    $message = 'You have allowed anonymous users to create accounts without approval so the authenticated role defaults to untrusted.';
   }
 
   $form['security_review_untrusted_roles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Untrusted roles'),
-    '#description' => t('Mark which roles are not trusted. The anonymous role defaults to untrusted. @message Read more about the idea behind trusted and untrusted roles on <a href="!url">DrupalScout.com</a>.', array('@message' => $message, '!url' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security'))),
+    '#description' => t('Mark which roles are not trusted. The anonymous role defaults to untrusted. @message Read more about the idea behind trusted and untrusted roles on <a href="!url">DrupalScout.com</a>. Most Security Review checks look for resources usable by untrusted roles.', array('@message' => $message, '!url' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security'))),
     '#options' => $options,
     '#default_value' => variable_get('security_review_untrusted_roles', $defaults),
   );
