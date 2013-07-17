@@ -559,7 +559,7 @@ function _security_review_weak_passwords($trusted_roles) {
   // Explicitly check uid 1 in case they have no roles.
   $weak_uid1 = db_fetch_object(db_query("SELECT u.uid, u.name, 1 AS count FROM {users} u WHERE pass = md5(name) AND uid = 1"));
   if (!empty($weak_uid1->count)) {
-    $weak_users[$weak_uid1->uid] = $weak_uid1->name; 
+    $weak_users[$weak_uid1->uid] = $weak_uid1->name;
   }
 
   return $weak_users;
