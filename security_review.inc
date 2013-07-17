@@ -249,7 +249,8 @@ function _security_review_check_file_perms_scan($directory, $ignore) {
 }
 
 /**
- * Check for formats that do not have HTML filter that can be used by untrusted users.
+ * Check for formats that either do not have HTML filter that can be used by
+ * untrusted users, or if they do check if unsafe tags are allowed.
  */
 function security_review_check_input_formats() {
   $result = TRUE;
