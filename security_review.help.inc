@@ -387,3 +387,22 @@ function security_review_check_name_passwords_help($results = NULL) {
 
   return $element;
 }
+
+function security_review_check_executable_php_help($results = NULL) {
+  $element = array();
+  $element['title'] = t('Executable PHP in files directory');
+  $element['descriptions'][] = t("The Drupal files directory is for user-uploaded files and protects against a malicious user executing arbitrary PHP code against your site.");
+  $element['descriptions'][] = t('Read more about the <a href="!link">risk of PHP code execution on Drupal.org</a>.', array('!link' => 'https://drupal.org/node/615888'));
+
+  $last_check = security_review_get_last_check('security_review', 'executable_php');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == FALSE) {
+    $directory = variable_get('file_public_path', 'sites/default/files');
+    $element['findings']['descriptions'][] = t('Security Review was able to execute a PHP file written to your files directory. It is recommended that you review your webserver for recommended configuration.');
+    $element['findings']['descriptions'][] = t("If you are using Apache you should check that the .htaccess file at $directory has the correct content.");
+  }
+
+  return $element;
+}

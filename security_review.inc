@@ -170,6 +170,12 @@ function _security_review_security_checks() {
       'failure' => t('Untrusted users have access to use the PHP input format.'),
     );
   }
+  $checks['executable_php'] = array(
+    'title' => t('Executable PHP'),
+    'callback' => 'security_review_check_executable_php',
+    'success' => t('PHP files in the Drupal files directory cannot be executed.'),
+    'failure' => t('PHP files in the Drupal files directory can be executed.'),
+  );
 
   return array('security_review' => $checks);
 }
@@ -539,6 +545,30 @@ function security_review_check_name_passwords($last_check = NULL) {
   }
 
   return array('result' => $result, 'value' => $check_result_value);
+}
+
+/**
+ * Check if PHP files written to the files directory can be executed.
+ */
+function security_review_check_executable_php($last_check = NULL) {
+  $result = TRUE;
+  global $base_url;
+  $message = 'Security review test ' . date('Ymdhis');
+  $content = "<?php\necho '" . $message . "';";
+  $directory = variable_get('file_public_path', 'sites/default/files');
+  $file = '/security_review_test.php';
+  if ($file_create = @fopen('./' . $directory . $file, 'w')) {
+    $create_status = fwrite($file_create, $content);
+    fclose($file_create);
+  }
+  $response = drupal_http_request($base_url . '/' . $directory . $file);
+  if ($response->code == 200 && $response->data === $message) {
+    $result = FALSE;
+  }
+  if (file_exists('./' . $directory . $file)) {
+    @unlink('./' . $directory . $file);
+  }
+  return array('result' => $result, 'value' => '');
 }
 
 function _security_review_weak_passwords($trusted_roles) {
