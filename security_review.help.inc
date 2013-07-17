@@ -281,7 +281,7 @@ function security_review_check_field_help($results = NULL) {
       $ids = array_keys($value);
       $entity_info = entity_get_info($entity_type);
       $id = $entity_info['entity keys']['id'];
-      $label = $entity_info['entity keys']['label'];
+      $label = isset($entity_info['entity keys']['label']) ? $entity_info['entity keys']['label'] : $id;
       $uri_callback = $entity_info['uri callback'];
       // There is no access checking. We state that the use of this module should be granted to trusted users only.
       $entities = entity_load($entity_type, $ids);
