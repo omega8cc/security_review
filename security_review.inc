@@ -552,8 +552,10 @@ function security_review_check_name_passwords($last_check = NULL) {
  * Check if PHP files written to the files directory can be executed.
  */
 function security_review_check_executable_php($last_check = NULL) {
-  $result = TRUE;
   global $base_url;
+  $result = TRUE;
+  $check_result_value = array();
+
   $message = 'Security review test ' . date('Ymdhis');
   $content = "<?php\necho '" . $message . "';";
   $directory = variable_get('file_public_path', 'sites/default/files');
@@ -565,11 +567,31 @@ function security_review_check_executable_php($last_check = NULL) {
   $response = drupal_http_request($base_url . '/' . $directory . $file);
   if ($response->code == 200 && $response->data === $message) {
     $result = FALSE;
+    $check_result_value[] = 'executable_php';
   }
   if (file_exists('./' . $directory . $file)) {
     @unlink('./' . $directory . $file);
   }
-  return array('result' => $result, 'value' => '');
+  // Check for presence of the .htaccess file and if the contents are correct.
+  if (!file_exists($directory . '/.htaccess')) {
+    $result = FALSE;
+    $check_result_value[] = 'missing_htaccess';// = t('Missing .htaccess in files directory.');
+  }
+  else {
+    $contents = file_get_contents($directory . '/.htaccess');
+    // Text from includes/file.inc.
+    $expected = "SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006\nOptions None\nOptions +FollowSymLinks";
+    if ($contents !== $expected) {
+      $result = FALSE;
+      $check_result_value[] = 'incorrect_htaccess';// = t('.htaccess file contains unexpected content.');
+    }
+    if (is_writable($directory . '/.htaccess')) {
+      // Don't modify $result.
+      $check_result_value[] = 'writable_htaccess';
+    }
+  }
+
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 function _security_review_weak_passwords($trusted_roles) {
