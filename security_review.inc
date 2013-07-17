@@ -205,6 +205,7 @@ function security_review_check_file_perms() {
   $file_path = './' . rtrim(variable_get('file_public_path', conf_path() . '/files'), '/');
   // Set files to ignore.
   $ignore = array('..', 'CVS', $file_path);
+  drupal_alter('security_review_file_ignore', $ignore);
   $files = _security_review_check_file_perms_scan('.', $ignore);
 
   // Try creating or appending files.
