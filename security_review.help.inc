@@ -422,3 +422,22 @@ function security_review_check_executable_php_help($results = NULL) {
 
   return $element;
 }
+
+function security_review_check_base_url_help() {
+  global $base_url;
+  $element = array();
+  $element['title'] = t('Drupal base URL');
+  $element['descriptions'][] = t("Setting Drupal's \$base_url in settings.php can help protect against attackers manipulating links to your site. For example, an attacker could exploit a missing \$base_url setting to carry out a phishing attack that may lead to the theft of your site's private user data.");
+
+  $last_check = security_review_get_last_check('security_review', 'base_url_set');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == FALSE) {
+    $element['findings']['descriptions'][] = t('Your site is available at the following URL: !url.', array('!url' => $base_url));
+    $element['findings']['descriptions'][] = t("If your site should only be available at that URL it is recommended that you set it as the \$base_url variable in the settings.php file at !file", array('!file' => DRUPAL_ROOT . '/' . conf_path() . '/settings.php'));
+    $element['findings']['descriptions'][] = t("Or, if you are using Drupal's multi-site functionality then you should set the \$base_url variable for the appropriate settings.php for your site.");
+  }
+
+  return $element;
+}

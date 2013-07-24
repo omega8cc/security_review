@@ -176,6 +176,12 @@ function _security_review_security_checks() {
     'success' => t('PHP files in the Drupal files directory cannot be executed.'),
     'failure' => t('PHP files in the Drupal files directory can be executed.'),
   );
+  $checks['base_url_set'] = array(
+    'title' => t('Drupal base URL'),
+    'callback' => 'security_review_check_base_url',
+    'success' => t('Base URL is set in settings.php.'),
+    'failure' => t('Base URL is not set in settings.php.'),
+  );
 
   return array('security_review' => $checks);
 }
@@ -592,6 +598,22 @@ function security_review_check_executable_php($last_check = NULL) {
   }
 
   return array('result' => $result, 'value' => $check_result_value);
+}
+
+/**
+ * Check if $base_url is set in settings.php.
+ */
+function security_review_check_base_url($last_check = NULL) {
+  if (file_exists(DRUPAL_ROOT . '/' . conf_path() . '/settings.php')) {
+    include DRUPAL_ROOT . '/' . conf_path() . '/settings.php';
+  }
+  if (isset($base_url)) {
+    $result = TRUE;
+  }
+  else {
+    $result = FALSE;
+  }
+  return array('result' => $result, 'value' => '');
 }
 
 function _security_review_weak_passwords($trusted_roles) {
