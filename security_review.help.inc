@@ -441,3 +441,28 @@ function security_review_check_base_url_help() {
 
   return $element;
 }
+
+function security_review_check_temporary_files_help($results = NULL) {
+  $element = array();
+  $element['title'] = t('Sensitive temporary files');
+  $element['descriptions'][] = t("Some file editors create temporary copies of a file that can be left on the file system. A copy of a sensitive file like Drupal's settings.php may be readable by a malicious user who could use that information to further attack a site.");
+
+  $last_check = security_review_get_last_check('security_review', 'temporary_files');
+  if ($last_check['skip'] == '1') {
+    $element['findings']['descriptions'][] = _security_review_check_skipped($last_check);
+  }
+  elseif ($last_check['result'] == '0') {
+    $element['findings']['descriptions'][] = t("The following are extraneous files in your Drupal installation that can probably be removed. You should confirm you have saved any of your work in the original files prior to removing these.");
+    if (is_null($results)) {
+      $results = security_review_check_temporary_files();
+    }
+    foreach ($results['value'] as $path) {
+      $element['findings']['items'][] = array(
+        'safe' => check_plain($path),
+        'raw' => $path,
+      );
+    }
+  }
+
+  return $element;
+}

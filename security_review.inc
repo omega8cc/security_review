@@ -182,6 +182,12 @@ function _security_review_security_checks() {
     'success' => t('Base URL is set in settings.php.'),
     'failure' => t('Base URL is not set in settings.php.'),
   );
+  $checks['temporary_files'] = array(
+    'title' => t('Temporary files'),
+    'callback' => 'security_review_check_temporary_files',
+    'success' => t('No sensitive temporary files were found.'),
+    'failure' => t('Sensitive temporary files were found on your files system.'),
+  );
 
   return array('security_review' => $checks);
 }
@@ -554,6 +560,31 @@ function security_review_check_name_passwords($last_check = NULL) {
   return array('result' => $result, 'value' => $check_result_value);
 }
 
+function _security_review_weak_passwords($trusted_roles) {
+  $weak_users = array();
+
+  // Select users with a trusted role whose password is their username.
+  // @todo need to generate passwords in PHP to get salt.
+  $sql = "SELECT u.uid, u.name, COUNT(rid) AS count FROM {users} u LEFT JOIN
+    {users_roles} ur ON u.uid = ur.uid AND ur.rid in (:rids)
+    WHERE pass = md5(name) GROUP BY uid";
+  $results = db_query($sql, array(':rids' => $trusted_roles)); // @todo pager_query?
+  foreach ($results as $row) {
+    $record[] = $row;
+    if ($row->count > 0) {
+      $weak_users[$row->uid] = $row->name;
+    }
+  }
+
+  // Explicitly check uid 1 in case they have no roles.
+  $weak_uid1 = db_fetch_object(db_query("SELECT u.uid, u.name, 1 AS count FROM {users} u WHERE pass = md5(name) AND uid = 1"));
+  if (!empty($weak_uid1->count)) {
+    $weak_users[$weak_uid1->uid] = $weak_uid1->name;
+  }
+
+  return $weak_users;
+}
+
 /**
  * Check if PHP files written to the files directory can be executed.
  */
@@ -616,29 +647,29 @@ function security_review_check_base_url($last_check = NULL) {
   return array('result' => $result, 'value' => '');
 }
 
-function _security_review_weak_passwords($trusted_roles) {
-  $weak_users = array();
-
-  // Select users with a trusted role whose password is their username.
-  // @todo need to generate passwords in PHP to get salt.
-  $sql = "SELECT u.uid, u.name, COUNT(rid) AS count FROM {users} u LEFT JOIN
-    {users_roles} ur ON u.uid = ur.uid AND ur.rid in (:rids)
-    WHERE pass = md5(name) GROUP BY uid";
-  $results = db_query($sql, array(':rids' => $trusted_roles)); // @todo pager_query?
-  foreach ($results as $row) {
-    $record[] = $row;
-    if ($row->count > 0) {
-      $weak_users[$row->uid] = $row->name;
+/**
+ * Check for sensitive temporary files like settings.php~.
+ */
+function security_review_check_temporary_files($last_check = NULL) {
+  $result = TRUE;
+  $check_result_value = array();
+  $files = array();
+  $dir = scandir(DRUPAL_ROOT . '/' . conf_path() . '/');
+  foreach ($dir as $file) {
+    // Set full path to only files.
+    if (!is_dir($file)) {
+      $files[] = DRUPAL_ROOT . '/' . conf_path() . '/' . $file;
     }
   }
-
-  // Explicitly check uid 1 in case they have no roles.
-  $weak_uid1 = db_fetch_object(db_query("SELECT u.uid, u.name, 1 AS count FROM {users} u WHERE pass = md5(name) AND uid = 1"));
-  if (!empty($weak_uid1->count)) {
-    $weak_users[$weak_uid1->uid] = $weak_uid1->name;
+  drupal_alter('security_review_temporary_files', $files);
+  foreach ($files as $path) {
+    $matches = array();
+    if (file_exists($path) && preg_match('/.*(~|\.sw[op]|\.bak|\.orig\.save)$/', $path, $matches) !== FALSE && !empty($matches)) {
+      $result = FALSE;
+      $check_result_value[] = $path;
+    }
   }
-
-  return $weak_users;
+  return array('result' => $result, 'value' => $check_result_value);
 }
 
 /**
