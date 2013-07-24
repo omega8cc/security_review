@@ -217,6 +217,12 @@ function security_review_check_file_perms() {
   $file_path = './' . rtrim(variable_get('file_public_path', conf_path() . '/files'), '/');
   // Set files to ignore.
   $ignore = array('..', 'CVS', '.git', '.svn', '.bzr', $file_path);
+  // Add private files directory if it's set.
+  $private_files = variable_get('file_private_path', '');
+  if (!empty($private_files)) {
+    $private_files = substr($private_files, strrpos($private_files, '/') + 1);
+    $ignore[] = $private_files;
+  }
   drupal_alter('security_review_file_ignore', $ignore);
   $files = _security_review_check_file_perms_scan('.', $ignore);
 
@@ -352,26 +358,21 @@ function security_review_check_error_reporting() {
  * There is ample room for the user to get around this check. @TODO get more sophisticated?
  */
 function security_review_check_private_files() {
-  // Get the default download method.
-  $scheme = variable_get('file_default_scheme', '');
-  // Most insecure configurations will be using the local private wrapper.
-  if ($scheme == 'private') {
-    $file_directory_path = variable_get('file_private_path', '');
-    if (strpos($file_directory_path, '/') === 0) {
-      // Path begins at root.
-      $result = TRUE;
-    }
-    elseif (strpos($file_directory_path, '../') === 0) {
-      // Path begins by moving up the system.
-      $result = FALSE;
-    }
-    else {
-      // Directory is relative (or crafty).
-      $result = FALSE;
-    }
+  $file_directory_path = variable_get('file_private_path', '');
+  if (empty($file_directory_path)) {
+    $result = NULL; // Ignore this check.
+  }
+  elseif (strpos($file_directory_path, '/') === 0) {
+    // Path begins at root.
+    $result = TRUE;
+  }
+  elseif (strpos($file_directory_path, '../') === 0) {
+    // Path begins by moving up the system.
+    $result = FALSE;
   }
   else {
-    $result = NULL;
+    // Directory is relative (or crafty).
+    $result = FALSE;
   }
   return array('result' => $result);
 }

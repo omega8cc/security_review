@@ -92,6 +92,8 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
       $this->assertTrue(is_array($return), "Check $name returns an array");
       $this->assertTrue(array_key_exists('result', $return), "Check $name has key 'result'");
     }
+    // Note, not all checks can be tested (such as file permission checks)
+    // because of the shared dependencies of simpletest with the host.
 
     // Test text formats check.
     $check = security_review_check_input_formats();
@@ -104,10 +106,6 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
     // Error reporting defaults to screen.
     $check = security_review_check_error_reporting();
     $this->assertFalse($check['result'], 'Error reporting check fails');
-
-    // Private files not enabled.
-    $check = security_review_check_private_files();
-    $this->assertTrue(is_null($check['result']), 'Private files check is null');
 
     // Failed logins is null.
     $check = security_review_check_failed_logins();
