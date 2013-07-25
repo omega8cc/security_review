@@ -613,7 +613,7 @@ function security_review_check_executable_php($last_check = NULL) {
   // Check for presence of the .htaccess file and if the contents are correct.
   if (!file_exists($directory . '/.htaccess')) {
     $result = FALSE;
-    $check_result_value[] = 'missing_htaccess';// = t('Missing .htaccess in files directory.');
+    $check_result_value[] = 'missing_htaccess';
   }
   else {
     $contents = file_get_contents($directory . '/.htaccess');
@@ -621,7 +621,7 @@ function security_review_check_executable_php($last_check = NULL) {
     $expected = "SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006\nOptions None\nOptions +FollowSymLinks";
     if ($contents !== $expected) {
       $result = FALSE;
-      $check_result_value[] = 'incorrect_htaccess';// = t('.htaccess file contains unexpected content.');
+      $check_result_value[] = 'incorrect_htaccess';
     }
     if (is_writable($directory . '/.htaccess')) {
       // Don't modify $result.
