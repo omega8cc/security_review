@@ -63,7 +63,7 @@ targetted security review and support for Drupal websites and can be contacted
 at http://wwww.acquia.com or via email at sales@acquia.com.
 
 You can read more about our Drupal security review service at 
-http://www.acquia.com/products-services/acquia-professional-services/service-offerings
+http://www.acquia.com/products-services/professional-services/offerings#security_audit
 
 
 -- CREDIT --
