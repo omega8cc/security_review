@@ -85,7 +85,8 @@ function security_review_page() {
   $checks = array();
   $output = array();
   // Retrieve the checklist.
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
   // Retrieve results from last run of the checklist.
   $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
   foreach ($result as $record) {
@@ -127,7 +128,8 @@ function security_review_get_last_check($namespace, $check_name) {
  */
 function security_review_check_help($module = NULL, $check_name = NULL) {
   // Include checks and help files.
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
   module_load_include('inc', 'security_review', 'security_review.help');
   $output = '';
   if (!is_null($module) && !is_null($check_name)) {
@@ -155,7 +157,6 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
     // List all checks as links to specific help.
     $output .= '<h3>' . t('Check-specfic help') . '</h3>';
     $output .= '<p>' . t("Details and help on the security review checks. Checks are not always perfectly correct in their procedure and result. Refer to drupal.org handbook documentation if you are unsure how to make the recommended alterations to your configuration or consult the module's README.txt for support.") . '</p>';
-    $checklist = module_invoke_all('security_checks');
     foreach ($checklist as $module => $checks) {
       foreach ($checks as $reviewcheck => $check) {
         $items[] = l($check['title'], 'admin/reports/security-review/help/' . $module . '/' . $reviewcheck);
@@ -283,7 +284,8 @@ function security_review_run_form($form, &$form_state, $checks = NULL) {
 }
 
 function security_review_run_form_submit($form, &$form_state) {
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
   $skipped = security_review_skipped_checks();
   // Remove checks that are being skipped.
   if (!empty($skipped)) {
@@ -432,16 +434,6 @@ function _security_review_batch_finished($success, $results, $operations) {
 }
 
 /**
- * Implements hook_security_checks().
- */
-function security_review_security_checks() {
-  module_load_include('inc', 'security_review');
-  // security_review_get_checks() will include implementations of this hook
-  // that Security Review defines on behalf of other modules.
-  return security_review_get_checks();
-}
-
-/**
  * Helper function returns skipped checks.
  */
 function security_review_skipped_checks() {
@@ -465,7 +457,8 @@ function security_review_toggle_check($type = 'ajax', $check_name) {
   }
   $result = FALSE;
   // To be sure, compare the user-provided check with available checks.
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
   foreach ($checklist as $module => $checks) {
     if (in_array($check_name, array_keys($checks))) {
       $query = db_select('security_review', 'sr')
@@ -521,7 +514,8 @@ function security_review_security_review_log($module, $check_name, $message, $va
  * Module settings form.
  */
 function security_review_settings() {
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
   $roles = user_roles();
   foreach ($roles as $rid => $role) {
     $options[$rid] = check_plain($role);
@@ -585,7 +579,8 @@ function _security_review_settings_submit($form, &$form_state) {
   global $user;
   $log = $form_state['values']['security_review_log'];
   // Set checked.
-  $checklist = module_invoke_all('security_checks');
+  module_load_include('inc', 'security_review');
+  $checklist = security_review_get_checklist();
 
   $stored = array();
   $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");

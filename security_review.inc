@@ -94,7 +94,9 @@ function _security_review_run_check($module, $check_name, $check, $log, $store =
 }
 
 /**
- * Implements hook_security_checks().
+ * Core Security Review's checks.
+ *
+ * @see security_review_get_checklist().
  */
 function _security_review_security_checks() {
   $checks['file_perms'] = array(
@@ -193,7 +195,7 @@ function _security_review_security_checks() {
 }
 
 /**
- * Checks for security_review_get_checks() when Views is enabled.
+ * Checks for security_review_get_checklist() when Views is enabled.
  */
 function views_security_checks() {
   $checks['access'] = array(
@@ -681,14 +683,17 @@ function security_review_check_temporary_files($last_check = NULL) {
 }
 
 /**
- * Helper function allows for collection of this file's security checks.
+ * Get core Security Review checks and checks from any hook_security_checks().
+ *
+ * @return array
+ *   Array of checks indexed by module name. e.g.:
+ *   'security_review' => array(
+ *     'check_name' => array(...)
+ *   )
  */
-function security_review_get_checks() {
+function security_review_get_checklist() {
   $checks = _security_review_security_checks();
-  if (module_exists('views') && function_exists('views_get_all_views')) {
-    $views = views_security_checks();
-    $checks = array_merge($checks, $views);
-  }
+  $checks = array_merge($checks, module_invoke_all('security_checks'));
   return $checks;
 }
 

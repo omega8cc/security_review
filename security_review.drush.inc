@@ -5,12 +5,15 @@
  * Drush commands for Security Review module.
  */
 
+// Include security_review.inc file for when invoked from outside the site.
+require_once __DIR__ . '/security_review.inc';
+
 /**
  * Implementation of hook_drush_command().
  */
 function security_review_drush_command() {
   $items = array();
-  
+
   $items['security-review'] = array(
     'callback' => 'security_review_drush',
     'aliases' => array('secrev'),
@@ -31,7 +34,7 @@ function security_review_drush_command() {
     'aliases' => array('passset'),
     'description' => "Create and load a rainbow table for password checking",
   );
-  
+
   return $items;
 }
 
@@ -52,7 +55,7 @@ function security_review_drush_help($section) {
  */
 function security_review_drush() {
   // Retrieve the checklist.
-  $checklist = module_invoke_all('security_checks');
+  $checklist = security_review_get_checklist();
 
   $store = drush_get_option('store');
   $log = drush_get_option('log');
@@ -154,7 +157,7 @@ function security_review_drush_hash_setup() {
     // Put an index on users.pass.
     db_drop_index($ret, 'users', 'pass'); // Drop in case this has already run.
     db_add_index($ret, 'users', 'pass', array('pass'));
-    
+
     $handle = fopen($args[0], 'r');
     if ($handle) {
       $count = 0;

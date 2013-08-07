@@ -21,6 +21,7 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
   public function setUp() {
     // Enable the Security Review module.
     parent::setUp('security_review');
+    module_load_include('inc', 'security_review');
     $this->privileged_user = $this->drupalCreateUser(array(
       'run security checks',
       'access security review list',
@@ -35,7 +36,7 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
   }
 
   public function testUI() {
-    $checklist = module_invoke_all('security_checks');
+    $checklist = security_review_get_checklist();
     $secrev_checks = $checklist['security_review'];
 
     $this->drupalGet('admin/reports/security-review');
@@ -83,7 +84,7 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
   }
 
   public function testCheckResults() {
-    $checklist = module_invoke_all('security_checks');
+    $checklist = security_review_get_checklist();
     $secrev_checks = $checklist['security_review'];
     // Assert that all checks return expected format.
     foreach ($secrev_checks as $name => $check) {
