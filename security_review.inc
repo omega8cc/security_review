@@ -672,7 +672,7 @@ function security_review_check_temporary_files($last_check = NULL) {
   drupal_alter('security_review_temporary_files', $files);
   foreach ($files as $path) {
     $matches = array();
-    if (file_exists($path) && preg_match('/.*(~|\.sw[op]|\.bak|\.orig\.save)$/', $path, $matches) !== FALSE && !empty($matches)) {
+    if (file_exists($path) && preg_match('/.*(~|\.sw[op]|\.bak|\.orig|\.save)$/', $path, $matches) !== FALSE && !empty($matches)) {
       $result = FALSE;
       $check_result_value[] = $path;
     }
