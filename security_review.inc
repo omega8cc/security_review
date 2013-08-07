@@ -217,6 +217,11 @@ function security_review_check_file_perms() {
   $file_path = './' . rtrim(variable_get('file_public_path', conf_path() . '/files'), '/');
   // Set files to ignore.
   $ignore = array('..', 'CVS', '.git', '.svn', '.bzr', $file_path);
+  // Add temporary files directory if it's set.
+  $temp_path = variable_get('file_temporary_path', '');
+  if (!empty($temp_path)) {
+    $ignore[] = './' . rtrim($temp_path, '/');
+  }
   // Add private files directory if it's set.
   $private_files = variable_get('file_private_path', '');
   if (!empty($private_files)) {
