@@ -227,6 +227,11 @@ function security_review_check_file_perms() {
   $file_path = './' . rtrim(file_directory_path(), '/');
   // Set files to ignore.
   $ignore = array('..', 'CVS', $file_path);
+  // Add temporary files directory if it's set.
+  $temp_path = variable_get('file_directory_temp', '');
+  if (!empty($temp_path)) {
+    $ignore[] = './' . rtrim($temp_path, '/');
+  }
   drupal_alter('security_review_file_ignore', $ignore);
   $files = _security_review_check_file_perms_scan('.', $ignore);
 
@@ -521,7 +526,7 @@ function security_review_check_nodes($last_check = NULL) {
   $result = TRUE;
   $check_result_value = array();
   $timestamp = NULL;
-  
+
   $sql = "SELECT n.nid FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid WHERE r.body LIKE '%s' ";
   // If the check passed before only look at nodes since the last run.
   if (!is_null($last_check) && $last_check['result'] == '1') {
@@ -604,7 +609,7 @@ function _security_review_weak_passwords($trusted_roles) {
   // Explicitly check uid 1 in case they have no roles.
   $weak_uid1 = db_fetch_object(db_query("SELECT u.uid, u.name, 1 AS count FROM {users} u WHERE pass = md5(name) AND uid = 1"));
   if (!empty($weak_uid1->count)) {
-    $weak_users[$weak_uid1->uid] = $weak_uid1->name; 
+    $weak_users[$weak_uid1->uid] = $weak_uid1->name;
   }
 
   return $weak_users;
@@ -713,7 +718,7 @@ function security_review_check_email_passwords($last_check = NULL) {
 
 /**
  * Helper function defines HTML tags that are considered unsafe.
- * 
+ *
  * Based on wysiwyg_filter_get_elements_blacklist().
  */
 function security_review_unsafe_tags() {
