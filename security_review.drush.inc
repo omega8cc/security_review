@@ -60,6 +60,12 @@ function security_review_drush() {
   $store = drush_get_option('store');
   $log = drush_get_option('log');
   $lastrun = drush_get_option('lastrun');
+  if (!function_exists('security_review_menu')) {
+    // Checklist is being executed when module is disabled . Deny these
+    // features.
+    $store = $log = $lastrun = FALSE;
+  }
+
   if (!$lastrun) {
     // Unset file_perms of security_review because drush is running as a
     // different user.
