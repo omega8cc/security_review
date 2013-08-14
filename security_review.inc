@@ -99,6 +99,7 @@ function _security_review_run_check($module, $check_name, $check, $log, $store =
  * @see security_review_get_checklist().
  */
 function _security_review_security_checks() {
+  $checks = array();
   $checks['file_perms'] = array(
     'title' => t('File system permissions'),
     'callback' => 'security_review_check_file_perms',
@@ -198,6 +199,7 @@ function _security_review_security_checks() {
  * Checks for security_review_get_checklist() when Views is enabled.
  */
 function views_security_checks() {
+  $checks = array();
   $checks['access'] = array(
     'title' => t('Views access'),
     'callback' => 'security_review_check_views_access',
@@ -357,7 +359,7 @@ function security_review_check_error_reporting() {
   else {
     $result = TRUE;
   }
-  return array('result' => $result);
+  return array('result' => $result, 'value' => $error_level);
 }
 
 /**
@@ -382,7 +384,7 @@ function security_review_check_private_files() {
     // Directory is relative (or crafty).
     $result = FALSE;
   }
-  return array('result' => $result);
+  return array('result' => $result, 'value' => $file_directory_path);
 }
 
 function security_review_check_query_errors($last_check = NULL) {

@@ -120,7 +120,7 @@ function security_review_get_last_check($namespace, $check_name) {
     ->condition('namespace', $namespace)
     ->condition('reviewcheck', $check_name)
     ->execute()->fetchAssoc();
-  return !empty($result) ? $result : NULL;
+  return !empty($result) ? $result : FALSE;
 }
 
 /**
@@ -132,6 +132,7 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
   $checklist = security_review_get_checklist();
   module_load_include('inc', 'security_review', 'security_review.help');
   $output = '';
+  $skipped_message = NULL;
   if (!is_null($module) && !is_null($check_name)) {
     $check = $checklist[$module][$check_name];
     if (isset($check['help'])) {
@@ -147,7 +148,18 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
       }
       $function = $check['callback'] . '_help';
       if (function_exists($function)) {
-        $element = $function();
+        $last_check = security_review_get_last_check($module, $check_name);
+        // Set skipped timestamp and user message.
+        if ($last_check['skip'] == '1') {
+          $skipped_message = _security_review_check_skipped($last_check);
+        }
+        // Add findings to check if it's failed.
+        elseif ($last_check['result'] == '0') {
+          $callback = $check['callback'];
+          $check_return = $callback();
+          $last_check = array_merge($last_check, $check_return);
+        }
+        $element = $function($last_check, $skipped_message);
         $output = theme('security_review_check_help', array('element' => $element));
       }
     }
@@ -377,6 +389,7 @@ function security_review_store_results($results) {
  * Run the security review checklist and return the full results.
  */
 function security_review_run_full($checklist, $log = NULL) {
+  module_load_include('inc', 'security_review');
   // Allow callers, like our drush command, to decide not to log.
   if (is_null($log)) {
     $log = variable_get('security_review_log', TRUE);
