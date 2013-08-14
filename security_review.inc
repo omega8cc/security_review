@@ -303,6 +303,7 @@ function security_review_check_input_formats() {
         // Check for unsafe tags in allowed tags.
         $allowed_tags = $filter->settings['allowed_html'];
         $unsafe_tags = security_review_unsafe_tags();
+        drupal_alter('security_review_unsafe_tags', $unsafe_tags);
         foreach ($unsafe_tags as $tag) {
           if (strpos($allowed_tags, '<' . $tag . '>') !== FALSE) {
             // Found an unsafe tag
