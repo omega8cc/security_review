@@ -229,7 +229,10 @@ function security_review_check_file_perms() {
   // Add private files directory if it's set.
   $private_files = variable_get('file_private_path', '');
   if (!empty($private_files)) {
-    $private_files = substr($private_files, strrpos($private_files, '/') + 1);
+    // Remove leading slash if set.
+    if (strrpos($private_files, '/') !== FALSE) {
+      $private_files = substr($private_files, strrpos($private_files, '/') + 1);
+    }
     $ignore[] = $private_files;
   }
   drupal_alter('security_review_file_ignore', $ignore);
