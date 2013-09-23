@@ -377,17 +377,12 @@ function security_review_check_private_files() {
   if (empty($file_directory_path)) {
     $result = NULL; // Ignore this check.
   }
-  elseif (strpos($file_directory_path, '/') === 0) {
+  elseif (strpos(realpath($file_directory_path), DRUPAL_ROOT) === 0) {
     // Path begins at root.
-    $result = TRUE;
-  }
-  elseif (strpos($file_directory_path, '../') === 0) {
-    // Path begins by moving up the system.
     $result = FALSE;
   }
   else {
-    // Directory is relative (or crafty).
-    $result = FALSE;
+    $result = TRUE;
   }
   return array('result' => $result, 'value' => $file_directory_path);
 }

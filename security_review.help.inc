@@ -166,7 +166,7 @@ function security_review_check_error_reporting_help($check = NULL, $skipped_mess
 
 function security_review_check_private_files_help($check = NULL, $skipped_message = NULL) {
   $element['title'] = t('Private files');
-  $element['descriptions'][] = t("If you have Drupal's private files feature enabled you should move the files directory outside of the web server's document root. While Drupal will control serving files when requested by way of content if a user knows the actual system path they can circumvent Drupal's private files feature. You can protect against this by specifying a files directory outside of the webserver root.");
+  $element['descriptions'][] = t("If you have Drupal's private files feature enabled you should move the files directory outside of the web server's document root. Drupal will secure access to files that it renders the link to, but if a user knows the actual system path they can circumvent Drupal's private files feature. You can protect against this by specifying a files directory outside of the webserver root.");
 
   if (!empty($skipped_message)) {
     $element['findings']['descriptions'][] = $skipped_message;
