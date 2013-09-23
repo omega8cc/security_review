@@ -728,29 +728,36 @@ function security_review_check_views_access($last_check = NULL) {
 /**
  * Helper function defines HTML tags that are considered unsafe.
  *
- * Based on wysiwyg_filter_get_elements_blacklist().
+ * Based on wysiwyg_filter_get_elements_blacklist(),
+ * https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet, and
+ * html5sec.org.
  */
 function security_review_unsafe_tags() {
   return array(
     'applet',
     'area',
+    'audio',
     'base',
     'basefont',
     'body',
     'button',
+    'comment',
     'embed',
+    'eval',
     'form',
     'frame',
     'frameset',
     'head',
     'html',
     'iframe',
+    'image',
     'img',
     'input',
     'isindex',
     'label',
     'link',
     'map',
+    'math',
     'meta',
     'noframes',
     'noscript',
@@ -761,11 +768,13 @@ function security_review_unsafe_tags() {
     'script',
     'select',
     'style',
+    'svg',
     'table',
     'td',
     'textarea',
     'title',
-    'tr',
+    'video',
+    'vmlframe',
   );
 }
 
