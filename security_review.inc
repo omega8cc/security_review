@@ -649,15 +649,31 @@ function security_review_check_executable_php($last_check = NULL) {
  * Check if $base_url is set in settings.php.
  */
 function security_review_check_base_url($last_check = NULL) {
-  if (file_exists(DRUPAL_ROOT . '/' . conf_path() . '/settings.php')) {
-    $content = file_get_contents(DRUPAL_ROOT . '/' . conf_path() . '/settings.php');
-    $tokens = token_get_all($content);
+  // Support different methods to check for $base_url.
+  $method = variable_get('security_review_base_url_method', 'token');
+  $result = NULL;
+  if ($method === 'token') {
+    if (file_exists(DRUPAL_ROOT . '/' . conf_path() . '/settings.php')) {
+      $content = file_get_contents(DRUPAL_ROOT . '/' . conf_path() . '/settings.php');
+      $tokens = token_get_all($content);
+    }
+    $result = FALSE;
+    foreach ($tokens as $token) {
+      if (is_array($token) && $token[0] === T_VARIABLE && $token[1] == '$base_url') {
+        $result = TRUE;
+        break;
+      }
+    }
   }
-  $result = FALSE;
-  foreach ($tokens as $token) {
-    if (is_array($token) && $token[0] === T_VARIABLE && $token[1] == '$base_url') {
+  elseif ($method === 'include') {
+    if (file_exists(DRUPAL_ROOT . '/' . conf_path() . '/settings.php')) {
+      include DRUPAL_ROOT . '/' . conf_path() . '/settings.php';
+    }
+    if (isset($base_url)) {
       $result = TRUE;
-      break;
+    }
+    else {
+      $result = FALSE;
     }
   }
   return array('result' => $result, 'value' => '');

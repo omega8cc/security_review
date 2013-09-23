@@ -177,6 +177,25 @@ function security_review_settings() {
     '#options' => $options,
     '#default_value' => $values,
   );
+
+  $form['security_review_adv']['check_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Check-specific settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => TRUE,
+  );
+
+  $form['security_review_adv']['check_settings']['security_review_base_url_method'] = array(
+    '#type' => 'radios',
+    '#title' => t('Base URL check method'),
+    '#description' => t('Detecting the $base_url in settings.php can be done via PHP tokenization (recommend) or including the file. Note that if you have custom functionality in your settings.php it will be executed if the file is included. Including the file can result in a more accurate $base_url check if you wrap the setting in conditional statements.'),
+    '#options' => array(
+      'token' => t('Tokenize settings.php (recommended)'),
+      'include' => t('Include settings.php'),
+    ),
+    '#default_value' => variable_get('security_review_base_url_method', 'token'),
+  );
   // Add a submit handler to set the skipped checks.
   $form['#submit'][] = '_security_review_settings_submit';
 
@@ -234,6 +253,11 @@ function _security_review_settings_submit($form, &$form_state) {
   }
   // Unset security_review_skip to keep it from being written to a variable.
   unset($form_state['values']['security_review_skip']);
+
+  // Set check-specific settings.
+  foreach ($form_state['values']['check_settings'] as $variable_name => $value) {
+    variable_set($variable_name, $value);
+  }
 }
 
 /**

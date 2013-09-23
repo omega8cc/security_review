@@ -51,6 +51,7 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
     $this->assertFieldChecked('edit-security-review-untrusted-roles-2', 'Authenticated users are marked as untrusted');
     $this->assertNoFieldChecked('edit-security-review-untrusted-roles-3', 'Adminitrator users are not marked as untrusted');
     $this->assertFieldChecked('edit-security-review-log', 'Log results is checked');
+    $this->assertText('Base URL check method');
 
     // Confirm checks are available for skipping here.
     foreach ($secrev_checks as $name => $check) {
