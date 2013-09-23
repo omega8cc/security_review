@@ -76,15 +76,15 @@ function theme_security_review_help_options($element) {
 
 function security_review_check_file_perms_help($check = NULL, $skipped_message = NULL) {
   $element['title'] =  t("Web server file system permissions");
-  $element['descriptions'][] = t("It is dangerous to allow the web server to write to files inside the document root of your server. Doing so would allow Drupal to write files that could then be executed. An attacker might use such a vulnerability to take control of your site. An exception is the files directory which Drupal needs permission to write to in order to provide features like file attachments.");
-  $element['descriptions'][] = t("In addition to inspecting files, this test attempts to create and write to files. Look in your security_review module directory on the server for files named file_write_test.YYYYMMDDHHMMSS and for a file called IGNOREME.txt which gets a timestamp appended to it if it is writeable.</p>");
+  $element['descriptions'][] = t("It is dangerous to allow the web server to write to files inside the document root of your server. Doing so could allow Drupal to write files that could then be executed. An attacker might use such a vulnerability to take control of your site. An exception is the Drupal files, private files, and temporary directories which Drupal needs permission to write to in order to provide features like file attachments.");
+  $element['descriptions'][] = t("In addition to inspecting existing directories, this test attempts to create and write to your file system. Look in your security_review module directory on the server for files named file_write_test.YYYYMMDDHHMMSS and for a file called IGNOREME.txt which gets a timestamp appended to it if it is writeable.</p>");
   $element['descriptions'][] = t("<a href='!link'>Read more about file system permissions in the handbooks.</a>", array('!link' => url('http://drupal.org/node/244924')));
 
   if ($skipped_message) {
     $element['findings']['descriptions'][] = $skipped_message;
   }
   elseif ($check && $check['result'] == FALSE) {
-    $element['findings']['descriptions'][] = t('It is recommended that the following files or directories be corrected.');
+    $element['findings']['descriptions'][] = t('The following files and directories appear to be writeable by your web server. In most cases you can fix this by simply altering the file permissions or ownership. If you have command-line access to your host try running "chmod 644 [file path]" where [file path] is one of the following paths (relative to your webroot). For more information consult the <a href="!link">Drupal.org handbooks on file permissions</a>.', array('!link' => url('http://drupal.org/node/244924')));
     foreach ($check['value'] as $file) {
       $element['findings']['items'][] = array(
         'safe' => check_plain($file),

@@ -242,17 +242,19 @@ function security_review_check_file_perms() {
   // Assume it doesn't work.
   $create_status = $append_status = FALSE;
 
+  $append_message = t("Your web server should not be able to write to your modules directory. This is a security vulnerable. Consult the Security Review file permissions check help for mitigation steps.");
+
   $directory = drupal_get_path('module', 'security_review');
   // Write a file with the timestamp
   $file = './' . $directory . '/file_write_test.' . date('Ymdhis');
   if ($file_create = @fopen($file, 'w')) {
-    $create_status = fwrite($file_create, t("This is a vulnerable directory.\n"));
+    $create_status = fwrite($file_create, date('Ymdhis') . ' - ' . $append_message . "\n");
     fclose($file_create);
   }
   // Try to append to our IGNOREME file.
   $file = './'. $directory . '/IGNOREME.txt';
   if ($file_append = @fopen($file, 'a')) {
-    $append_status = fwrite($file_append, date('Ymdhis') . "\n");
+    $append_status = fwrite($file_append, date('Ymdhis') . ' - ' . $append_message . "\n");
     fclose($file_append);
   }
 
