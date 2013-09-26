@@ -14,10 +14,7 @@ function security_review_page() {
   module_load_include('inc', 'security_review');
   $checklist = security_review_get_checklist();
   // Retrieve results from last run of the checklist.
-  $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
-  foreach ($result as $record) {
-    $checks[] = $record;
-  }
+  $checks = security_review_get_stored_results();
   // Only users with the proper permission can run the checklist.
   if (user_access('run security checks')) {
     $output += drupal_get_form('security_review_run_form', $checks);
@@ -44,22 +41,22 @@ function security_review_reviewed($checklist, $checks, $namespace = NULL) {
   $header = t('Review results from last run !date', array('!date' => $date));
   $desc = t("Here you can review the results from the last run of the checklist. Checks are not always perfectly correct in their procedure and result. You can keep a check from running by clicking the 'Skip' link beside it. You can run the checklist again by expanding the fieldset above.");
   foreach ($checks as $check) {
-    $message = $check->result ? $checklist[$check->namespace][$check->reviewcheck]['success'] : $checklist[$check->namespace][$check->reviewcheck]['failure'];
-    $title = $check->result ? t('OK') : t('Error');
-    $class = $check->skip ? 'info' : ($check->result ? 'ok' : 'error');
-    $toggle = $check->skip ? t('Enable') : t('Skip');
-    $token = drupal_get_token($check->reviewcheck);
+    $message = $check['result'] ? $checklist[$check['namespace']][$check['reviewcheck']]['success'] : $checklist[$check['namespace']][$check['reviewcheck']]['failure'];
+    $title = $check['result'] ? t('OK') : t('Error');
+    $class = $check['skip'] ? 'info' : ($check['result'] ? 'ok' : 'error');
+    $toggle = $check['skip'] ? t('Enable') : t('Skip');
+    $token = drupal_get_token($check['reviewcheck']);
     $link_options = array(
       'query' => array('token' => $token),
       //'attributes' => array('class' => 'use-ajax'),
     );
     $items[] = array(
       'title' => $title,
-      'value' => $check->result,
+      'value' => $check['result'],
       'class' => $class,
       'message' => $message,
-      'help_link' => l(t('Details'), 'admin/reports/security-review/help/' . $check->namespace . '/' . $check->reviewcheck),
-      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/nojs/' . $check->reviewcheck, $link_options),
+      'help_link' => l(t('Details'), 'admin/reports/security-review/help/' . $check['namespace'] . '/' . $check['reviewcheck']),
+      'toggle_link' => l($toggle, 'admin/reports/security-review/toggle/nojs/' . $check['reviewcheck'], $link_options),
     );
   }
   $output = theme('security_review_reviewed', array('items' => $items, 'header' => $header, 'description' => $desc));

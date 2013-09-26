@@ -72,6 +72,11 @@ class SecurityReviewTestCase extends DrupalWebTestCase {
     $this->assertText('Review results from last run');
     $this->assertText('Details');
     $this->assertText('Skip');
+
+    // Test status page test.
+    $this->drupalGet('admin/reports/status');
+    $this->assertText('There are failed Security Review checks');
+    $this->assertLinkByHref('admin/reports/security-review', 0, 'Link to checklist appears');
   }
 
   /**

@@ -90,7 +90,40 @@ function security_review_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Retrieve stored checks and results.
+ *
+ * @return array Array of checks with keys:
+ *     namespace - string Check namespace
+ *     reviewcheck - string Check name
+ *     result - bool Whether check passed or not
+ *     lastrun - UNIX timestamp of last time check ran
+ *     skip - bool Whether check is being skipped or not
+ *     skiptime - UNIX timestamp of when check was skipped, if set
+ *     skipuid - UID of user who skipped the check, if set
+ */
+function security_review_get_stored_results() {
+  $checks = array();
+  // Retrieve results from last run of the checklist.
+  $result = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
+  foreach ($result as $record) {
+    $checks[] = array(
+      'namespace'   => $record->namespace,
+      'reviewcheck' => $record->reviewcheck,
+      'result'      => $record->result === '1' ? TRUE : FALSE,
+      'lastrun'     => $record->lastrun,
+      'skip'        => $record->skip === '1' ? TRUE : FALSE,
+      'skiptime'    => $record->skiptime,
+      'skipuid'     => $record->skipuid,
+    );
+  }
+  return $checks;
+}
+
+/**
  * Retrieve the result from the last run of a security check.
+ *
+ * @return array
+ *   @see security_review_get_stored_results() for format
  */
 function security_review_get_last_check($namespace, $check_name) {
   $fields = array('namespace', 'reviewcheck', 'result', 'lastrun', 'skip', 'skiptime', 'skipuid');
@@ -98,7 +131,12 @@ function security_review_get_last_check($namespace, $check_name) {
     ->condition('namespace', $namespace)
     ->condition('reviewcheck', $check_name)
     ->execute()->fetchAssoc();
-  return !empty($result) ? $result : FALSE;
+  if (!empty($result)) {
+    $result['result'] = $result['result'] === '1' ? TRUE : FALSE;
+    $result['skip'] = $result['skip'] === '1' ? TRUE : FALSE;
+    return $result;
+  }
+  return FALSE;
 }
 
 /**
