@@ -220,11 +220,11 @@ function security_review_check_file_perms() {
   // Extract ending folder for file directory path.
   $file_path = './' . rtrim(variable_get('file_public_path', conf_path() . '/files'), '/');
   // Set files to ignore.
-  $ignore = array('..', 'CVS', '.git', '.svn', '.bzr', $file_path);
+  $ignore = array('..', 'CVS', '.git', '.svn', '.bzr', realpath($file_path));
   // Add temporary files directory if it's set.
   $temp_path = variable_get('file_temporary_path', '');
   if (!empty($temp_path)) {
-    $ignore[] = './' . rtrim($temp_path, '/');
+    $ignore[] = realpath('./' . rtrim($temp_path, '/'));
   }
   // Add private files directory if it's set.
   $private_files = variable_get('file_private_path', '');
@@ -236,7 +236,8 @@ function security_review_check_file_perms() {
     $ignore[] = $private_files;
   }
   drupal_alter('security_review_file_ignore', $ignore);
-  $files = _security_review_check_file_perms_scan('.', $ignore);
+  $parsed = array(realpath('.'));
+  $files = _security_review_check_file_perms_scan('.', $parsed, $ignore);
 
   // Try creating or appending files.
   // Assume it doesn't work.
@@ -264,23 +265,25 @@ function security_review_check_file_perms() {
   return array('result' => $result, 'value' => $files);
 }
 
-function _security_review_check_file_perms_scan($directory, $ignore) {
+function _security_review_check_file_perms_scan($directory, &$parsed, $ignore) {
   $items = array();
   if ($handle = opendir($directory)) {
     while (($file = readdir($handle)) !== FALSE) {
       // Don't check hidden files or ones we said to ignore.
-      if ($file[0] != "." && !in_array($file, $ignore)) {
-        $file = $directory . "/" . $file;
-        if (is_dir($file) && !in_array($file, $ignore)) {
-          $items = array_merge($items, _security_review_check_file_perms_scan($file, $ignore));
-          if (is_writable($file)) {
-            $items[] = preg_replace("/\/\//si", "/", $file);
+      $path = $directory . "/" . $file;
+      if ($file[0] != "." && !in_array($file, $ignore) && !in_array(realpath($path), $ignore)) {
+        if (is_dir($path) && !in_array(realpath($path), $parsed)) {
+          $parsed[] = realpath($path);
+          $items = array_merge($items, _security_review_check_file_perms_scan($path, $parsed, $ignore));
+          if (is_writable($path)) {
+            $items[] = preg_replace("/\/\//si", "/", $path);
           }
         }
-        elseif (is_writable($file) && !in_array($file, $ignore)) {
-          $items[] = preg_replace("/\/\//si", "/", $file);
+        elseif (is_writable($path)) {
+          $items[] = preg_replace("/\/\//si", "/", $path);
         }
       }
+
     }
     closedir($handle);
   }
