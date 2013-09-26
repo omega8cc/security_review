@@ -496,10 +496,16 @@ function security_review_check_field($last_check = NULL) {
           $current_table = key($field['storage']['details']['sql'][FIELD_LOAD_CURRENT]);
           $revision_table = key($field['storage']['details']['sql'][FIELD_LOAD_REVISION]);
           if (!array_key_exists($current_table, $tables)) {
-            $tables[$current_table] = $field['storage']['details']['sql'][FIELD_LOAD_CURRENT][$current_table]['value'];
+            $tables[$current_table] = array(
+              'column' => $field['storage']['details']['sql'][FIELD_LOAD_CURRENT][$current_table]['value'],
+              'name' => $field['field_name'],
+            );
           }
           if (!array_key_exists($revision_table, $tables)) {
-            $tables[$revision_table] = $field['storage']['details']['sql'][FIELD_LOAD_REVISION][$revision_table]['value'];
+            $tables[$revision_table] = array(
+              'column' => $field['storage']['details']['sql'][FIELD_LOAD_REVISION][$revision_table]['value'],
+              'name' => $field['field_name'],
+            );
           }
         }
       }
@@ -509,15 +515,18 @@ function security_review_check_field($last_check = NULL) {
     return array('result' => $check_result, 'value' => $check_result_value);
   }
   // Search for PHP or Javascript tags in text columns.
-  foreach ($tables as $table => $column) {
-    $sql = "SELECT DISTINCT entity_id, entity_type FROM {" . $table . "} WHERE " . $column . " LIKE :text";
+  foreach ($tables as $table => $info) {
+    $sql = "SELECT DISTINCT entity_id, entity_type FROM {" . $table . "} WHERE " . $info['column'] . " LIKE :text";
     // Handle changed? @todo
-    foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $description => $comparison) {
+    foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $vuln_type => $comparison) {
       $results = db_query($sql, array(':text' => $comparison)); // @pager query?
       foreach ($results as $result) {
         $check_result = FALSE;
         if (!isset($check_result_value[$result->entity_type]) || !array_key_exists($result->entity_id, $check_result_value[$result->entity_type])) {
-          $check_result_value[$result->entity_type][$result->entity_id] = $description;
+          $check_result_value[$result->entity_type][$result->entity_id] = array(
+            'type' => $vuln_type,
+            'field' => $info['name'],
+          );
         }
       }
     }

@@ -271,10 +271,10 @@ function security_review_check_field_help($check = NULL, $skipped_message = NULL
           $uri = $uri_callback($entity);
           $uri = url($uri['path'] . '/edit'); // @todo can this assumption be made?
         }
-        $html = t('@description found in <a href="!link">@title</a>', array('@description' => $value[$entity->{$id}], '!link' => $uri, '@title' => $entity->{$label}));
+        $html = t('@description found in @field field of <a href="!link">@title</a>', array('@field' => $value[$entity->{$id}]['field'], '@description' => $value[$entity->{$id}]['type'], '!link' => $uri, '@title' => $entity->{$label}));
         $element['findings']['items'][] = array(
           'html' => $html,
-          'safe' => t('@description in !url', array('@description' => $value[$entity->{$id}], '!url' => $uri)),
+          'safe' => t('@description in @field field of !url', array('@field' => $value[$entity->{$id}]['field'], '@description' => $value[$entity->{$id}], '!url' => $uri)),
           'raw' => $value[$entity->{$id}] . ':' . $uri,
         );
       }
