@@ -339,11 +339,12 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
     }
     elseif (isset($check['callback'])) {
       if (isset($check['file'])) {
+        $check_module = $module;
         // Handle Security Review defining checks for other modules.
         if (isset($check['module'])) {
-          $module = $check['module'];
+          $check_module = $check['module'];
         }
-        module_load_include('inc', $module, $check['file']);
+        module_load_include('inc', $check_module, $check['file']);
       }
       $function = $check['callback'] . '_help';
       if (function_exists($function)) {
