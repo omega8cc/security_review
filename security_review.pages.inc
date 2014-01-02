@@ -157,7 +157,7 @@ function security_review_settings() {
   foreach ($checklist as $module => $checks) {
     foreach ($checks as $check_name => $check) {
       // Determine if check is being skipped.
-      if (!empty($skipped) && array_key_exists($check_name, $skipped[$module])) {
+      if (!empty($skipped) && isset($skipped[$module]) && array_key_exists($check_name, $skipped[$module])) {
         $values[] = $check_name;
         $label = t('!name <em>skipped by UID !uid on !date</em>', array('!name' => $check['title'], '!uid' => $skipped[$module][$check_name]['skipuid'], '!date' => format_date($skipped[$module][$check_name]['skiptime'])));
       }
