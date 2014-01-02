@@ -6,7 +6,7 @@
  */
 
 // Include security_review.inc file for when invoked from outside the site.
-require_once __DIR__ . '/security_review.inc';
+include_once __DIR__ . '/security_review.inc';
 
 /**
  * Implementation of hook_drush_command().
@@ -57,6 +57,9 @@ function security_review_drush_help($section) {
  * Run checklist and display results command.
  */
 function security_review_drush() {
+  if (!function_exists('security_review_get_checklist')) {
+    return drush_set_error('REQUIREMENTS_ERROR', 'File security_review.inc is required to run the checklist.');
+  }
   // Retrieve the checklist.
   $checklist = security_review_get_checklist();
 
