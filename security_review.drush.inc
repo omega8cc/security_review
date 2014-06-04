@@ -23,6 +23,7 @@ function security_review_drush_command() {
       'log' => 'Log results of each check to watchdog, defaults to off',
       'lastrun' => 'Do not run the checklist, just print last results',
       'check' => 'Comma-separated list of specified checks to run. See README.txt for list of options',
+      'skip' => 'Invert behavior of --check. Run all checks except specified checks',
       'short' => "Short result messages instead of full description (e.g. 'Text formats').",
       'results' => 'Show the incorrect settings for failed checks.',
     ),
@@ -72,6 +73,7 @@ function security_review_drush() {
     $store = $log = $lastrun = FALSE;
   }
   $specific_checks = drush_get_option_list('check');
+  $skip = drush_get_option('skip');
   $short_titles = drush_get_option('short');
   if (!empty($short_titles)) {
     $short_titles = TRUE;
@@ -90,8 +92,8 @@ function security_review_drush() {
 
   if (!$lastrun) {
     if (!empty($specific_checks)) {
-      // Run specified checks only.
-      $new_checklist = array();
+      // Get specified checks.
+      $specific_checklist = array();
       foreach ($specific_checks as $check_name) {
         if (empty($check_name)) {
           continue; // Can happen if user puts space after comma.
@@ -103,10 +105,21 @@ function security_review_drush() {
           $module = 'security_review';
         }
         if (isset($checklist[$module][$check_name])) {
-          $new_checklist[$module][$check_name] = $checklist[$module][$check_name];
+          $specific_checklist[$module][$check_name] = $checklist[$module][$check_name];
         }
       }
-      $checklist = $new_checklist;
+      if ($skip) {
+        // Run all checks except specified checks.
+        foreach ($specific_checklist as $module => $checks) {
+          foreach (array_keys($checks) as $check_name) {
+            unset($checklist[$module][$check_name]);
+          }
+        }
+      }
+      else {
+        // Run only specified checks.
+        $checklist = $specific_checklist;
+      }
     }
     else {
       // Unset file_perms of security_review because drush is running as a
