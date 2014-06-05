@@ -6,7 +6,7 @@
  */
 
 // Include security_review.inc file for when invoked from outside the site.
-include_once __DIR__ . '/security_review.inc';
+include_once dirname(__FILE__) . '/security_review.inc';
 
 /**
  * Implementation of hook_drush_command().
