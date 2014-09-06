@@ -157,14 +157,14 @@ function security_review_drush() {
   }
   elseif ($lastrun) {
     // Retrieve results from last run of the checklist.
-    $results = db_query("SELECT namespace, reviewcheck, result, lastrun, skip, skiptime, skipuid FROM {security_review}");
-    while($record = $results->fetchAssoc()) {
-      $checks[] = $record;
-    }
+    $results = security_review_get_stored_results();
     // Print results.
-    if (!empty($checks)) {
-      foreach ($checks as $check) {
-        _security_review_drush_print_result($checklist[$check['namespace']][$check['reviewcheck']], $short_titles, $show_results);
+    if (!empty($results)) {
+      foreach ($results as $result) {
+        if (isset($checklist[$result['namespace']][$result['reviewcheck']])) {
+          $check = array_merge($result, $checklist[$result['namespace']][$result['reviewcheck']]);
+          _security_review_drush_print_result($check, $short_titles, $show_results);
+        }
       }
     }
   }
