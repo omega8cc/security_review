@@ -274,8 +274,8 @@ function security_review_check_field_help($check = NULL, $skipped_message = NULL
         $html = t('@description found in @field field of <a href="!link">@title</a>', array('@field' => $value[$entity->{$id}]['field'], '@description' => $value[$entity->{$id}]['type'], '!link' => $uri, '@title' => $entity->{$label}));
         $element['findings']['items'][] = array(
           'html' => $html,
-          'safe' => t('@description in @field field of !url', array('@field' => $value[$entity->{$id}]['field'], '@description' => $value[$entity->{$id}], '!url' => $uri)),
-          'raw' => $value[$entity->{$id}] . ':' . $uri,
+          'safe' => t('@description in @field field of !url', array('@field' => $value[$entity->{$id}]['field'], '@description' => $value[$entity->{$id}]['type'], '!url' => $uri)),
+          'raw' => $value[$entity->{$id}]['field'] . ':' . $uri,
         );
       }
     }
