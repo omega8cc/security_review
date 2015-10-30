@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Drush commands for Security Review module.
@@ -33,6 +32,7 @@ function security_review_drush_command() {
       'secrev --lastrun' => 'Output the stored results from the last run of the checklist'
     ),
   );
+
   $items['password-check-setup'] = array(
     'callback' => 'security_review_drush_hash_setup',
     'aliases' => array('passset'),
@@ -288,5 +288,32 @@ function security_review_drush_hash_setup() {
   }
   else {
     drush_die('File not found');
+  }
+}
+
+/**
+ * Implements hook_drush_command_alter().
+ */
+function security_review_drush_command_alter(&$command) {
+  // Adds security_review checks to existing security report.
+  if ($command['command'] == 'audit_security') {
+    $security_review_checks = array(
+      'FilePerms',
+      'InputFormats',
+      'Field',
+      'ErrorReporting',
+      'PrivateFiles',
+      'UploadExtensions',
+      'AdminPermissions',
+      'ExecutablePhp',
+      'BaseUrlSet',
+      'TemporaryFiles',
+    );
+    foreach ($security_review_checks as $name) {
+      $command['checks'][] = array(
+        'name' => $name,
+        'location' => __DIR__ . '/security_review.site_audit.inc',
+      );
+    }
   }
 }
