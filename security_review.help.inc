@@ -209,7 +209,7 @@ function security_review_check_failed_logins_help($check = NULL, $skipped_messag
     $element['findings']['descriptions'][] = $skipped_message;
   }
   elseif ($check && $check['result'] == FALSE) {
-    $element['findings']['descriptions'][] = t('The following IPs were observed with an abundanced of failed login attempts.');
+    $element['findings']['descriptions'][] = t('The following IPs were observed with an abundance of failed login attempts.');
     foreach ($check['value'] as $ip) {
       $element['findings']['items'][] = array(
         'safe' => check_plain($ip),
@@ -348,7 +348,7 @@ function security_review_check_name_passwords_help($check = NULL, $skipped_messa
         'raw' => $name,
       );
     }
-    $element['findings']['pager'] = theme('pager', NULL, 20);
+    //$element['findings']['pager'] = theme('pager', NULL, 20);
   }
 
   return $element;
