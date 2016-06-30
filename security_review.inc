@@ -589,10 +589,15 @@ function _security_review_weak_passwords($trusted_roles) {
   $weak_users = array();
 
   // Select users with a trusted role.
-  $sql = "SELECT u.uid, u.name, u.pass, COUNT(rid) AS count FROM {users} u
-    LEFT JOIN {users_roles} ur ON u.uid = ur.uid AND ur.rid in (:rids)
-    GROUP BY uid";
-  $results = db_query($sql, array(':rids' => $trusted_roles))->fetchAllAssoc('uid');
+  $query = db_select('users', 'u');
+  $query->leftJoin('users_roles', 'ur', 'u.uid = ur.uid AND ur.rid IN (:rids)', array(':rids' => $trusted_roles));
+  $query->fields('u', array('uid', 'name', 'pass'));
+  $query->addExpression('COUNT(rid)', 'count');
+  $query->groupBy('u.uid');
+  $query->groupBy('u.name');
+  $query->groupBy('u.pass');
+
+  $results = $query->execute()->fetchAllAssoc('uid');
 
   // Find users with the same password as their username.
   foreach ($results as $row) {
