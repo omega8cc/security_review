@@ -388,7 +388,7 @@ function security_review_check_help($module = NULL, $check_name = NULL) {
   else {
     $output = _security_review_help();
     // List all checks as links to specific help.
-    $output .= '<h3>' . t('Check-specfic help') . '</h3>';
+    $output .= '<h3>' . t('Check-specific help') . '</h3>';
     $output .= '<p>' . t("Details and help on the security review checks. Checks are not always perfectly correct in their procedure and result. Refer to drupal.org handbook documentation if you are unsure how to make the recommended alterations to your configuration or consult the module's README.txt for support.") . '</p>';
     foreach ($checklist as $module => $checks) {
       foreach ($checks as $reviewcheck => $check) {
