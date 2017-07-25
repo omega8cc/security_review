@@ -337,7 +337,8 @@ function security_review_toggle_check($type = 'ajax', $check_name) {
  * Helper function creates message for reporting check skip information.
  */
 function _security_review_check_skipped($last_check) {
-  $account = array_pop(user_load_multiple(array($last_check['skipuid'])));
+  $users = user_load_multiple(array($last_check['skipuid']));
+  $account = array_pop($users);
   $time = format_date($last_check['skiptime'], 'medium');
   $message = t('Check marked for skipping on !time by !user', array('!time' => $time, '!user' => theme('username', array('account' => $account))));
   return $message;
