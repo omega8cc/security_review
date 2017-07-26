@@ -518,23 +518,29 @@ function security_review_check_field($last_check = NULL) {
     return array('result' => $check_result, 'value' => $check_result_value);
   }
   // Search for PHP or Javascript tags in text columns.
+  $known_risky_fields = explode(',', variable_get('security_review_known_risky_fields', ''));
   foreach ($tables as $table => $info) {
-    $sql = "SELECT DISTINCT entity_id, entity_type FROM {" . $table . "} WHERE " . $info['column'] . " LIKE :text";
+    // Column & table come from field definitions & are safe to use in a query.
+    $sql = "SELECT DISTINCT entity_id, entity_type, " . $info['column'] . " AS field_text FROM {" . $table . "} WHERE " . $info['column'] . " LIKE :text";
     // Handle changed? @todo
     foreach (array('Javascript' => '%<script%', 'PHP' => '%<?php%') as $vuln_type => $comparison) {
       $results = db_query($sql, array(':text' => $comparison)); // @pager query?
       foreach ($results as $result) {
-        $check_result = FALSE;
         if (!isset($check_result_value[$result->entity_type]) || !array_key_exists($result->entity_id, $check_result_value[$result->entity_type])) {
-          $check_result_value[$result->entity_type][$result->entity_id] = array(
-            'type' => $vuln_type,
-            'field' => $info['name'],
-          );
+          // Only alert on values that are not known to be safe.
+          $hash = hash('sha256', implode((array) $result));
+          if (!in_array($hash, $known_risky_fields)) {
+            $check_result = FALSE;
+            $check_result_value[$result->entity_type][$result->entity_id] = array(
+              'type' => $vuln_type,
+              'field' => $info['name'],
+              'hash' => $hash,
+            );
+          }
         }
       }
     }
   }
-
   return array('result' => $check_result, 'value' => $check_result_value);
 }
 
