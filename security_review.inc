@@ -60,6 +60,8 @@ function _security_review_run($checklist, $log = FALSE) {
  * Run a single Security Review check.
  */
 function _security_review_run_check($module, $check_name, $check, $log, $store = FALSE) {
+  $variables = array('@title' => $check['title'], '@name' => $check_name);
+  _security_review_log($module, $check_name, 'Beginning the @title (@name) security review check.', $variables, WATCHDOG_INFO);
   $last_check = array();
   if ($store) {
     // Get the results of the last check.
@@ -82,12 +84,11 @@ function _security_review_run_check($module, $check_name, $check, $log, $store =
   $check_result['lastrun'] = REQUEST_TIME;
 
   if ($log && !is_null($return['result'])) { // Do not log if result is NULL.
-    $variables = array('!name' => $check_result['title']);
     if ($check_result['result']) {
-      _security_review_log($module, $check_name, '!name check passed', $variables, WATCHDOG_INFO);
+      _security_review_log($module, $check_name, '@title check passed', $variables, WATCHDOG_INFO);
     }
     else {
-      _security_review_log($module, $check_name, '!name check failed', $variables, WATCHDOG_ERROR);
+      _security_review_log($module, $check_name, '@title check failed', $variables, WATCHDOG_ERROR);
     }
   }
   return $check_result;
@@ -619,7 +620,7 @@ function _security_review_weak_passwords($trusted_roles) {
       }
     }
   }
-    
+
   return $weak_users;
 }
 
