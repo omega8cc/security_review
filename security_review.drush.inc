@@ -158,6 +158,7 @@ function security_review_drush() {
     // Run the checklist.
     $checklist_results = security_review_run($checklist, $log ? TRUE : NULL);
     if ($store) {
+      variable_set('security_review_last_run', time());
       security_review_store_results($checklist_results);
     }
     // Compile results.
