@@ -107,10 +107,10 @@ function in security_review.inc for details.
 
 Please use the issue queue at https://drupal.org/project/security_review for all
 module support. You can read more about securely configuring your site at
-http://drupal.org/security/secure-configuration and http://drupalscout.com
+http://drupal.org/security/secure-configuration.
 
 Acquia, the provider of this module, offers detailed,
-targetted security review and support for Drupal websites and can be contacted
+targeted security review and support for Drupal websites and can be contacted
 at http://wwww.acquia.com or via email at sales@acquia.com.
 
 You can read more about our Drupal security review service at

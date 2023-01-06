@@ -138,7 +138,7 @@ function security_review_settings() {
   $form['security_review_untrusted_roles'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Untrusted roles'),
-    '#description' => t('Mark which roles are not trusted. The anonymous role defaults to untrusted. @message Read more about the idea behind trusted and untrusted roles on <a href="!url">DrupalScout.com</a>. Most Security Review checks look for resources usable by untrusted roles.', array('@message' => $message, '!url' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security'))),
+    '#description' => t('Mark which roles are not trusted. The anonymous role defaults to untrusted. @message Read more about the idea behind trusted and untrusted roles on <a href="!url">Drupal.org</a>. Most Security Review checks look for resources usable by untrusted roles.', array('@message' => $message, '!url' => url('https://www.drupal.org/docs/7/understanding-drupal/users-permissions-and-roles'))),
     '#options' => $options,
     '#default_value' => variable_get('security_review_untrusted_roles', array_keys($defaults)),
   );

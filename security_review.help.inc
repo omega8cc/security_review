@@ -223,7 +223,7 @@ function security_review_check_failed_logins_help($check = NULL, $skipped_messag
 function security_review_check_admin_permissions_help($check = NULL, $skipped_message = NULL) {
   $element['title'] = t('Admin and trusted Drupal permissions');
   $element['descriptions'][] = t("Drupal's permission system is extensive and allows for varying degrees of control. Certain permissions would allow a user total control, or the ability to escalate their control, over your site and should only be granted to trusted users.");
-  $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on DrupalScout.com.</a>', array('!link' => url('http://drupalscout.com/knowledge-base/importance-user-roles-and-permissions-site-security')));
+  $element['descriptions'][] = t('<a href="!link">Read more about trusted vs. untrusted roles and permissions on Drupal.org.</a>', array('!link' => url('https://www.drupal.org/docs/7/understanding-drupal/users-permissions-and-roles')));
 
   if (!empty($skipped_message)) {
     $element['findings']['descriptions'][] = $skipped_message;
