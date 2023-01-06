@@ -557,8 +557,9 @@ function security_review_check_upload_extensions($last_check = NULL) {
         $field = field_info_field($field_name);
         if ($field['module'] == 'image' || $field['module'] == 'file') {
           // Check instance file_extensions.
+          $allowed_extensions = explode(' ', $instance['settings']['file_extensions']);
           foreach ($unsafe_extensions as $unsafe_extension) {
-            if (strpos($instance['settings']['file_extensions'], $unsafe_extension) !== FALSE) {
+            if (in_array($unsafe_extension, $allowed_extensions)) {
               // Found an unsafe extension.
               $check_result_value[$instance['field_name']][$instance['bundle']] = $unsafe_extension;
               $check_result = FALSE;
