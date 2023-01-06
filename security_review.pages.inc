@@ -281,8 +281,12 @@ function _security_review_settings_submit($form, &$form_state) {
 /**
  * Menu callback and Javascript callback for check skip toggling.
  */
-function security_review_toggle_check($type = 'ajax', $check_name) {
+function security_review_toggle_check($type, $check_name) {
   global $user;
+  // Deprecated optional parameter, set legacy default value.
+  if (empty($type)) {
+    $type = 'ajax';
+  }
   if (!isset($_GET['token']) || !drupal_valid_token($_GET['token'], $check_name)) {
     return drupal_access_denied();
   }
