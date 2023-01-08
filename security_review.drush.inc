@@ -250,6 +250,11 @@ function _security_review_drush_findings_output($check) {
     $function = $check['callback'] . '_help';
     if (function_exists($function)) {
       $element = $function($check);
+      if (is_array($element['findings']['descriptions'])) {
+        foreach ($element['findings']['descriptions'] as $description) {
+          $findings[] = $description;
+        }
+      }
       if (is_array($element['findings']['items'])) {
         foreach ($element['findings']['items'] as $item) {
           if (is_array($item) && isset($item['raw'])) {
