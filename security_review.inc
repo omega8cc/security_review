@@ -662,7 +662,12 @@ function security_review_check_executable_php($last_check = NULL) {
     $contents = file_get_contents($directory . '/.htaccess');
     // Text from includes/file.inc.
     $expected = file_htaccess_lines(FALSE);
-    if (trim($contents) !== trim($expected)) {
+
+    // Trim each line separately then put them back together.
+    $expected = implode("\n", array_map('trim', explode("\n", trim($expected))));
+    $contents = implode("\n", array_map('trim', explode("\n", trim($contents))));
+
+    if ($contents !== $expected) {
       $result = FALSE;
       $check_result_value[] = 'incorrect_htaccess';
     }
