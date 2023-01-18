@@ -370,7 +370,7 @@ function security_review_check_executable_php_help($check = NULL, $skipped_messa
           $element['findings']['descriptions'][] = t('Security Review was able to execute a PHP file written to your files directory.');
           break;
         case 'missing_htaccess':
-          $directory = variable_get('file_public_path', 'sites/default/files');
+          $directory = variable_get('file_public_path', conf_path() . '/files');
           $element['findings']['descriptions'][] = t("The .htaccess file is missing from the files directory at !path", array('!path' => $directory));
           $element['findings']['descriptions'][] = t("Note, if you are using a webserver other than Apache you should consult your server's documentation on how to limit the execution of PHP scripts in this directory.");
           break;

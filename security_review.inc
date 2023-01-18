@@ -635,7 +635,7 @@ function security_review_check_executable_php($last_check = NULL) {
 
   $message = 'Security review test ' . date('Ymdhis');
   $content = "<?php\necho '" . $message . "';";
-  $directory = variable_get('file_public_path', 'sites/default/files');
+  $directory = variable_get('file_public_path', conf_path() . '/files');
   $file = '/security_review_test.php';
   if ($file_create = @fopen('./' . $directory . $file, 'w')) {
     $create_status = fwrite($file_create, $content);
